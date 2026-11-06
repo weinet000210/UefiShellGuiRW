@@ -1,0 +1,20 @@
+## @file
+#  UefiShellGuiRWPkg - RW-Everything style hardware read/write tool for the
+#  UEFI Shell, built on LVGLUefiGuiPkg.
+#
+#  Copyright (c) 2026, Niall Tseng. All rights reserved.<BR>
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  DEC_SPECIFICATION              = 0x00010005
+  PACKAGE_NAME                   = UefiShellGuiRWPkg
+  PACKAGE_GUID                   = 0E3C9B52-7A1D-4C86-B0F4-5D2E8A913C47
+  PACKAGE_VERSION                = 0.01
+
+[Includes]
+  Include
+
+[Guids]
+  gUefiShellGuiRWPkgTokenSpaceGuid = { 0x0e3c9b52, 0x7a1d, 0x4c86, { 0xb0, 0xf4, 0x5d, 0x2e, 0x8a, 0x91, 0x3c, 0x47 } }
