@@ -23,7 +23,8 @@
 Rules:
 
 - RwCoreLib never includes LVGL headers; it can be tested on its own.
-- Views reach hardware only through RwCoreLib.
+- Views reach hardware only through RwCoreLib. Its rules, modules and tests
+  are in [RwCoreLib.md](RwCoreLib.md).
 - Every menu entry and toolbar button is a command in `Shell/Commands.c`
   (`RW_COMMAND_ID`). Menus and the toolbar only list command IDs, so a
   module is added in one place and gets its menu entry, toolbar button,

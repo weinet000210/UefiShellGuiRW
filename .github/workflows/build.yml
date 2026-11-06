@@ -43,6 +43,20 @@ jobs:
       - name: Build DEBUG and RELEASE
         run: EDK2_DIR="$GITHUB_WORKSPACE/edk2" WORKSPACE="$GITHUB_WORKSPACE/Build-rw" UefiShellGuiRW/scripts/build.sh DEBUG RELEASE
 
+      # RwCoreTest checks RwCoreLib against the q35 machine's known hardware
+      # (PCI, CMOS, MSR, SMBIOS, ACPI + AML, USB, COM1) and prints RWCORETEST: PASS.
+      - name: RwCoreLib checks (DEBUG)
+        run: |
+          UefiShellGuiRW/LVGLUefiGuiPkg/scripts/run-qemu.sh \
+            Build-rw/Build/UefiShellGuiRWPkg/DEBUG_GCC/X64/RwCoreTest.efi --smoke RWCORETEST \
+            -device pcie-root-port,id=rp1,chassis=1 -device virtio-rng-pci,bus=rp1
+
+      - name: RwCoreLib checks (RELEASE)
+        run: |
+          UefiShellGuiRW/LVGLUefiGuiPkg/scripts/run-qemu.sh \
+            Build-rw/Build/UefiShellGuiRWPkg/RELEASE_GCC/X64/RwCoreTest.efi --smoke RWCORETEST \
+            -device pcie-root-port,id=rp1,chassis=1 -device virtio-rng-pci,bus=rp1
+
       # The self test drives the menu bar, toolbar, MDI windows and keyboard
       # handling inside the application and prints UEFISHELLGUIRW: PASS.
       - name: Self test (DEBUG)
@@ -73,6 +87,7 @@ jobs:
           path: |
             Build-rw/Build/UefiShellGuiRWPkg/DEBUG_GCC/X64/UefiShellGuiRW.efi
             Build-rw/Build/UefiShellGuiRWPkg/RELEASE_GCC/X64/UefiShellGuiRW.efi
+            Build-rw/Build/UefiShellGuiRWPkg/RELEASE_GCC/X64/RwCoreTest.efi
             Build-rw/Build/UefiShellGuiRWPkg/RELEASE_GCC/X64/UsbMouseDxe.efi
 
   windows-vs2022:

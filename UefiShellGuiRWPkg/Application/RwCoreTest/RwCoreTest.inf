@@ -1,0 +1,54 @@
+## @file
+#  RwCoreTest: checks RwCoreLib on a QEMU q35 + OVMF machine. Prints
+#  RWCORETEST: PASS / FAIL on the serial port.
+#
+#  Copyright (c) 2026, Niall Tseng. All rights reserved.<BR>
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010017
+  BASE_NAME                      = RwCoreTest
+  FILE_GUID                      = A85D3B70-1E46-4C9F-8B27-D04E6F5A1C38
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = RwCoreTestMain
+
+[Sources]
+  RwCoreTest.h
+  RwCoreTest.c
+  TestBase.c
+  TestPci.c
+  TestSpace.c
+  TestMsr.c
+  TestSio.c
+  TestSmbios.c
+  TestAcpi.c
+  TestUsb.c
+  TestUart.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  UefiShellGuiRWPkg/UefiShellGuiRWPkg.dec
+
+[LibraryClasses]
+  UefiApplicationEntryPoint
+  UefiBootServicesTableLib
+  UefiLib
+  BaseLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  PrintLib
+  RwCoreLib
+
+[Protocols]
+  gEfiSerialIoProtocolGuid                      ## CONSUMES
+
+[Guids]
+  gEfiAcpi20TableGuid                           ## SOMETIMES_CONSUMES
+
+[BuildOptions]
+  GCC:*_*_*_CC_FLAGS = -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wno-sign-compare
+  MSFT:*_*_*_CC_FLAGS = /wd4204
