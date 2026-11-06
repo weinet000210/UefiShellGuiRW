@@ -1,0 +1,3 @@
+[submodule "LVGLUefiGuiPkg"]
+	path = LVGLUefiGuiPkg
+	url = https://github.com/weinet000210/LVGLUefiGuiPkg.git

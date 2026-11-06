@@ -1,0 +1,140 @@
+name: build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  EDK2_TAG: edk2-stable202608
+
+jobs:
+  linux-gcc:
+    name: Linux / GCC (build + QEMU self test)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: UefiShellGuiRW
+          submodules: recursive
+
+      - name: Checkout edk2
+        uses: actions/checkout@v4
+        with:
+          repository: tianocore/edk2
+          ref: ${{ env.EDK2_TAG }}
+          path: edk2
+
+      - name: Init required edk2 submodules
+        run: |
+          git -C edk2 submodule update --init --depth 1 \
+            BaseTools/Source/C/BrotliCompress/brotli \
+            MdeModulePkg/Library/BrotliCustomDecompressLib/brotli \
+            MdePkg/Library/MipiSysTLib/mipisyst
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential nasm uuid-dev python3 qemu-system-x86 ovmf
+
+      - name: Build BaseTools
+        run: make -C edk2/BaseTools -j"$(nproc)"
+
+      - name: Build DEBUG and RELEASE
+        run: EDK2_DIR="$GITHUB_WORKSPACE/edk2" WORKSPACE="$GITHUB_WORKSPACE/Build-rw" UefiShellGuiRW/scripts/build.sh DEBUG RELEASE
+
+      # The self test drives the menu bar, toolbar, MDI windows and keyboard
+      # handling inside the application and prints UEFISHELLGUIRW: PASS.
+      - name: Self test (DEBUG)
+        run: |
+          UefiShellGuiRW/LVGLUefiGuiPkg/scripts/run-qemu.sh \
+            Build-rw/Build/UefiShellGuiRWPkg/DEBUG_GCC/X64/UefiShellGuiRW.efi --smoke UEFISHELLGUIRW \
+            --args "-selftest"
+
+      - name: Self test (RELEASE) with screenshot
+        run: |
+          mkdir -p screenshots
+          UefiShellGuiRW/LVGLUefiGuiPkg/scripts/run-qemu.sh \
+            Build-rw/Build/UefiShellGuiRWPkg/RELEASE_GCC/X64/UefiShellGuiRW.efi --smoke UEFISHELLGUIRW \
+            --args "-selftest" \
+            --screenshot screenshots/mainframe-1024x768.png --after "UEFISHELLGUIRW: SCREEN READY"
+          test -s screenshots/mainframe-1024x768.png
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: screenshots/
+          if-no-files-found: ignore
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: UefiShellGuiRW-X64-GCC
+          path: |
+            Build-rw/Build/UefiShellGuiRWPkg/DEBUG_GCC/X64/UefiShellGuiRW.efi
+            Build-rw/Build/UefiShellGuiRWPkg/RELEASE_GCC/X64/UefiShellGuiRW.efi
+            Build-rw/Build/UefiShellGuiRWPkg/RELEASE_GCC/X64/UsbMouseDxe.efi
+
+  windows-vs2022:
+    name: Windows / VS2022 (build)
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: UefiShellGuiRW
+          submodules: recursive
+
+      - name: Checkout edk2
+        uses: actions/checkout@v4
+        with:
+          repository: tianocore/edk2
+          ref: ${{ env.EDK2_TAG }}
+          path: edk2
+
+      - name: Init required edk2 submodules
+        shell: bash
+        run: |
+          git -C edk2 submodule update --init --depth 1 \
+            BaseTools/Source/C/BrotliCompress/brotli \
+            MdeModulePkg/Library/BrotliCustomDecompressLib/brotli \
+            MdePkg/Library/MipiSysTLib/mipisyst
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install NASM
+        run: choco install nasm --no-progress -y
+
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x86
+
+      - name: Build BaseTools
+        shell: cmd
+        env:
+          PYTHON_COMMAND: python
+        run: |
+          cd edk2
+          call edksetup.bat Rebuild VS2022
+          if not exist BaseTools\Bin\Win32\GenFw.exe (
+            echo BaseTools build failed
+            exit /b 1
+          )
+
+      - name: Build DEBUG and RELEASE
+        shell: cmd
+        env:
+          EDK2_DIR: ${{ github.workspace }}\edk2
+          NASM_PREFIX: C:\Program Files\NASM\
+          PYTHON_COMMAND: python
+        run: |
+          call UefiShellGuiRW\scripts\build.bat DEBUG || exit /b 1
+          call UefiShellGuiRW\scripts\build.bat RELEASE || exit /b 1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: UefiShellGuiRW-X64-VS2022
+          path: |
+            Build-rw/Build/UefiShellGuiRWPkg/DEBUG_VS2022/X64/UefiShellGuiRW.efi
+            Build-rw/Build/UefiShellGuiRWPkg/RELEASE_VS2022/X64/UefiShellGuiRW.efi

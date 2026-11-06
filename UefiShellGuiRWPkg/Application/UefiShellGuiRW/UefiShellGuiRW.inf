@@ -1,0 +1,57 @@
+## @file
+#  UefiShellGuiRW - read & write hardware resources under the UEFI Shell,
+#  with an LVGL GUI (LVGLUefiGuiPkg) in the style of RW-Everything.
+#
+#  Copyright (c) 2026, Niall Tseng. All rights reserved.<BR>
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = UefiShellGuiRW
+  FILE_GUID                      = 6B1E7C3A-52D4-4F0E-9C61-3A8D2F5B7E10
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 0.0.1
+  ENTRY_POINT                    = UefiShellGuiRWMain
+
+[Sources]
+  UefiShellGuiRW.h
+  UefiShellGuiRW.c
+  SelfTest.c
+  Shell/Commands.c
+  Shell/MainFrame.c
+  Shell/MenuBar.c
+  Shell/Toolbar.c
+  Shell/StatusBar.c
+  Shell/Mdi.c
+  Shell/Icons.c
+  Views/Placeholder.c
+  Views/About.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  LVGLUefiGuiPkg/LVGLUefiGuiPkg.dec
+  UefiShellGuiRWPkg/UefiShellGuiRWPkg.dec
+
+[LibraryClasses]
+  UefiApplicationEntryPoint
+  UefiBootServicesTableLib
+  UefiLib
+  BaseLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  PrintLib
+  DebugLib
+  LvglLib
+  UefiGuiLib
+  UefiGuiRuntimeLib
+
+[Protocols]
+  gEfiLoadedImageProtocolGuid              ## CONSUMES
+  gEfiSerialIoProtocolGuid                 ## SOMETIMES_CONSUMES
+
+[BuildOptions]
+  # -ffreestanding: LVGL headers include <stdint.h>; use the compiler's own.
+  GCC:*_*_*_CC_FLAGS = -ffreestanding -Wextra -Wno-unused-parameter -Wno-missing-field-initializers
+  MSFT:*_*_*_CC_FLAGS = /wd4204
