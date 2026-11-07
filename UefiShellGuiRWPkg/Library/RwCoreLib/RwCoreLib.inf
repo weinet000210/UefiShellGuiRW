@@ -1,0 +1,67 @@
+## @file
+#  RwCoreLib: hardware access and decoders of UefiShellGuiRW (no UI).
+#
+#  Copyright (c) 2026, Niall Tseng. All rights reserved.<BR>
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010017
+  BASE_NAME                      = RwCoreLib
+  FILE_GUID                      = 6C2E8F14-93B5-4D7A-A1E0-5B38C4F7D912
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = RwCoreLib|UEFI_APPLICATION
+
+[Sources]
+  RwCoreInternal.h
+  RwStr.c
+  RwInfo.c
+  RwDataSource.c
+  RwPci.c
+  RwPciDecode.c
+  RwSpace.c
+  RwMsr.c
+  RwSio.c
+  RwSmbios.c
+  RwAcpi.c
+  RwAml.c
+  RwUsb.c
+  RwUart.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  UefiShellGuiRWPkg/UefiShellGuiRWPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  PrintLib
+  IoLib
+  UefiLib
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  DevicePathLib
+
+[Protocols]
+  gEfiPciRootBridgeIoProtocolGuid               ## CONSUMES
+  gEfiCpuArchProtocolGuid                       ## SOMETIMES_CONSUMES
+  gEfiUsb2HcProtocolGuid                        ## SOMETIMES_CONSUMES
+  gEfiUsbIoProtocolGuid                         ## SOMETIMES_CONSUMES
+  gEfiPciIoProtocolGuid                         ## SOMETIMES_CONSUMES
+  gEfiDevicePathProtocolGuid                    ## SOMETIMES_CONSUMES
+  gEfiSerialIoProtocolGuid                      ## SOMETIMES_CONSUMES
+  gEfiSioProtocolGuid                           ## SOMETIMES_CONSUMES
+
+[Guids]
+  gEfiSmbiosTableGuid                           ## SOMETIMES_CONSUMES
+  gEfiSmbios3TableGuid                          ## SOMETIMES_CONSUMES
+  gEfiAcpi20TableGuid                           ## SOMETIMES_CONSUMES
+  gEfiAcpi10TableGuid                           ## SOMETIMES_CONSUMES
+
+[BuildOptions]
+  GCC:*_*_*_CC_FLAGS = -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wno-sign-compare
+  MSFT:*_*_*_CC_FLAGS = /wd4204

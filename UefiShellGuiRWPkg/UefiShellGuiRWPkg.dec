@@ -16,5 +16,9 @@
 [Includes]
   Include
 
+[LibraryClasses]
+  ##  @libraryclass  Hardware access and decoders, no UI.
+  RwCoreLib|Include/Library/RwCoreLib.h
+
 [Guids]
   gUefiShellGuiRWPkgTokenSpaceGuid = { 0x0e3c9b52, 0x7a1d, 0x4c86, { 0xb0, 0xf4, 0x5d, 0x2e, 0x8a, 0x91, 0x3c, 0x47 } }

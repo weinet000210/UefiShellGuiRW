@@ -6,7 +6,7 @@ in the style of [RW-Everything](http://rweverything.com/) for Windows.
 The GUI runs on [LVGLUefiGuiPkg](https://github.com/weinet000210/LVGLUefiGuiPkg)
 (LVGL v9 on GOP, keyboard and mouse). The hardware access code comes from
 [uefirrw](https://github.com/weinet000210/uefirrw) and moves into a
-UI-free library in Phase 1.
+UI-free library, RwCoreLib ([Docs/RwCoreLib.md](Docs/RwCoreLib.md)).
 
 ![Main window in QEMU: menu bar, toolbar, MDI child windows, status bar](Docs/Images/mainframe-1024x768.png)
 
@@ -25,7 +25,7 @@ and VS2022 and its tests pass in CI (QEMU + OVMF).
 | Phase | Content | Status |
 |---|---|---|
 | 0 | Skeleton: package, LVGLUefiGuiPkg submodule, build scripts, CI; RW-style main window (menu bar, toolbar, MDI desktop, status bar), child window manager, self test | Done |
-| 1 | RwCoreLib: hardware access and table parsers ported from uefirrw, no UI | Planned |
+| 1 | RwCoreLib: hardware access and table parsers ported from uefirrw, no UI; RwCoreTest checks it in QEMU | Done |
 | 2 | Common widgets: HexGrid over a DataSource (byte/word/dword, edit, auto refresh), bit field view, tree, property table, dialogs | Planned |
 | 3 | Raw spaces: PCI list + config space, Memory, I/O, Index/Data, CMOS, CPU MSR | Planned |
 | 4 | Decoders: PCI capabilities, PCIe tree, ACPI + ASL, SMBIOS, USB | Planned |
@@ -59,6 +59,16 @@ package) first if the pointer is missing.
 
 `UefiShellGuiRW.efi -selftest` runs the built-in frame test and prints
 `UEFISHELLGUIRW: PASS` or `FAIL`.
+
+`RwCoreTest.efi` checks the hardware library against a QEMU q35 machine
+(PCI, PCIe root port, memory/I/O/CMOS, MSR, SMBIOS, ACPI and the AML
+disassembler, USB, COM1) and prints `RWCORETEST: PASS` or `FAIL`:
+
+```sh
+UefiShellGuiRW/LVGLUefiGuiPkg/scripts/run-qemu.sh \
+  Build-rw/Build/UefiShellGuiRWPkg/DEBUG_GCC/X64/RwCoreTest.efi --smoke RWCORETEST \
+  -device pcie-root-port,id=rp1,chassis=1 -device virtio-rng-pci,bus=rp1
+```
 
 ## Building
 
