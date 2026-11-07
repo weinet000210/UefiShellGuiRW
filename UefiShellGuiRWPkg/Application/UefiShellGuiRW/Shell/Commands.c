@@ -9,7 +9,7 @@
 
 STATIC CONST RW_COMMAND  mCommands[] = {
   { RwCmdNone,       "",                          NULL,       NULL,             NULL      },
-  { RwCmdRefresh,    "Refresh",                   "F5",       &gIconRefresh,    "Phase 2" },
+  { RwCmdRefresh,    "Refresh",                   "F5",       &gIconRefresh,    NULL      },
   { RwCmdScreenshot, "Save Screenshot",           "F12",      &gIconScreenshot, "Phase 6" },
   { RwCmdDumpAll,    "Dump All to File",          NULL,       &gIconDumpAll,    "Phase 6" },
   { RwCmdExit,       "Exit",                      "Alt+X",    &gIconExit,       NULL      },
@@ -51,9 +51,8 @@ RwGetCommand (
 
 /**
   Commands without a target are disabled (shown gray), like RW-Everything
-  grays out what the machine does not have. In Phase 0 only the file and
-  window commands without a planned phase are disabled when they would do
-  nothing.
+  grays out what the machine does not have. Refresh needs an active window
+  that can refresh; the window commands need a window.
 **/
 BOOLEAN
 RwIsCommandEnabled (
@@ -62,6 +61,7 @@ RwIsCommandEnabled (
 {
   switch (Id) {
     case RwCmdRefresh:
+      return (BOOLEAN)((RwMdiGetActive () != NULL) && (RwMdiGetActive ()->OnRefresh != NULL));
     case RwCmdScreenshot:
     case RwCmdDumpAll:
       return FALSE;
@@ -89,6 +89,10 @@ RwRunCommand (
   switch (Id) {
     case RwCmdExit:
       RwRequestExit ();
+      break;
+    case RwCmdRefresh:
+      Window = RwMdiGetActive ();
+      Window->OnRefresh (Window);
       break;
     case RwCmdCascade:
       RwMdiCascade ();

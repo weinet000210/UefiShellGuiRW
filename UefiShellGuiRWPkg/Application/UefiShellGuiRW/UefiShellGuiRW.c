@@ -11,6 +11,7 @@
 **/
 
 #include "UefiShellGuiRW.h"
+#include "Widgets/RwWidgets.h"
 #include <Protocol/LoadedImage.h>
 #include <Protocol/SerialIo.h>
 
@@ -68,6 +69,13 @@ RwKeyHandler (
   BOOLEAN        Ctrl;
   BOOLEAN        Alt;
 
+  //
+  // A modal dialog takes every key.
+  //
+  if (RwDialogHandleKey (Key)) {
+    return TRUE;
+  }
+
   if (RwMenuHandleKey (Key)) {
     return TRUE;
   }
@@ -105,8 +113,13 @@ RwKeyHandler (
       RwRunCommand (RwCmdScreenshot);
       return TRUE;
     default:
-      return FALSE;
+      break;
   }
+
+  //
+  // Everything else goes to the focused widget of the active window.
+  //
+  return RwFocusHandleKey (Key);
 }
 
 STATIC
@@ -181,6 +194,7 @@ UefiShellGuiRWMain (
   }
 
   UefiGuiSetKeyHandler (NULL, NULL);
+  RwDialogCancel ();
   RwMenuClose ();
   RwMdiCloseAll ();
   UefiGuiProcessEvents ();   // run the pending asynchronous deletes

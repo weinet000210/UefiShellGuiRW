@@ -26,7 +26,7 @@ and VS2022 and its tests pass in CI (QEMU + OVMF).
 |---|---|---|
 | 0 | Skeleton: package, LVGLUefiGuiPkg submodule, build scripts, CI; RW-style main window (menu bar, toolbar, MDI desktop, status bar), child window manager, self test | Done |
 | 1 | RwCoreLib: hardware access and table parsers ported from uefirrw, no UI; RwCoreTest checks it in QEMU | Done |
-| 2 | Common widgets: HexGrid over a DataSource (byte/word/dword, edit, auto refresh), bit field view, tree, property table, dialogs | Planned |
+| 2 | Common widgets: HexGrid over a DataSource (byte/word/dword, edit, auto refresh), bit field view, tree, property table, table, text view, dialogs, keyboard focus; DejaVu Sans Mono font | Done |
 | 3 | Raw spaces: PCI list + config space, Memory, I/O, Index/Data, CMOS, CPU MSR | Planned |
 | 4 | Decoders: PCI capabilities, PCIe tree, ACPI + ASL, SMBIOS, USB | Planned |
 | 5 | Devices: Super I/O, EC, COM port; SMBus/SPD, ATA/NVMe identify, EDID, MSR per CPU | Planned |
@@ -48,8 +48,18 @@ FS0:\> UefiShellGuiRW.efi
 | `F10`, `Alt+F/A/S/W/H` | Open a menu; arrows move, `Enter` runs, `Esc` closes |
 | `Ctrl+Tab` | Next child window |
 | `Ctrl+F4` | Close the active child window |
+| `Tab`, `Shift+Tab` | Next / previous pane in a child window |
+| `F5` | Refresh the active window |
 | `F1` | About |
 | `Alt+X` | Exit |
+
+In a hex grid: arrows, `Home`/`End`, `PgUp`/`PgDn` (page), type hex digits
+to edit (the value is written when the last digit is typed, `Enter` writes
+early, `Esc` cancels), `Ctrl+B`/`Ctrl+W`/`Ctrl+D` byte / word / dword,
+`Ctrl+G` go to address, `Ctrl+R` auto refresh on/off. Values that changed
+since the last read are red; `--` is a byte that cannot be read. In lists
+and trees: arrows, `PgUp`/`PgDn`, `Home`/`End`, `Enter`; `Left`/`Right`
+collapse / expand tree nodes. Docs/Widgets.md has the details.
 
 Mouse: drag a window by its caption, resize from the bottom-right corner,
 double-click the caption to maximize, use the caption buttons to minimize,

@@ -26,11 +26,24 @@
   Shell/StatusBar.c
   Shell/Mdi.c
   Shell/Icons.c
+  SelfTestWidgets.c
+  Widgets/RwWidgets.h
+  Widgets/Focus.c
+  Widgets/Dialog.c
+  Widgets/VList.c
+  Widgets/InfoViews.c
+  Widgets/HexGrid.c
+  Widgets/BitField.c
+  Widgets/FontMono12.c
+  Widgets/FontMono14.c
   Views/Placeholder.c
   Views/About.c
+  Views/WidgetTest.h
+  Views/WidgetTest.c
 
 [Packages]
   MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
   LVGLUefiGuiPkg/LVGLUefiGuiPkg.dec
   UefiShellGuiRWPkg/UefiShellGuiRWPkg.dec
 
@@ -46,6 +59,7 @@
   LvglLib
   UefiGuiLib
   UefiGuiRuntimeLib
+  RwCoreLib
 
 [Protocols]
   gEfiLoadedImageProtocolGuid              ## CONSUMES
