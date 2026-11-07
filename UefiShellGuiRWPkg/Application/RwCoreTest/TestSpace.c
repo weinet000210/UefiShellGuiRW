@@ -77,6 +77,50 @@ TestSpace (
   CHECK (!EFI_ERROR (RwDsReadBlock (&Ds, 0x0A, 4, Block, NULL)) && (Block[3] == RwCmosRead8 (0x0D)), "CMOS block read");
 
   //
+  // Memory map: sorted, merged, has conventional memory and the names.
+  //
+  {
+    RW_MEM_RANGE  *Ranges;
+    UINTN         Count;
+    UINTN         Index;
+    BOOLEAN       Sorted;
+    BOOLEAN       HaveRam;
+
+    CHECK (!EFI_ERROR (RwMemMapGet (&Ranges, &Count)) && (Count > 0), "memory map has ranges");
+    Sorted  = TRUE;
+    HaveRam = FALSE;
+    for (Index = 0; Index < Count; Index++) {
+      if ((Index > 0) && (Ranges[Index].Start < Ranges[Index - 1].Start + LShiftU64 (Ranges[Index - 1].Pages, EFI_PAGE_SHIFT))) {
+        Sorted = FALSE;
+      }
+
+      if ((Ranges[Index].Type == EfiConventionalMemory) && (Ranges[Index].Pages >= 256)) {
+        HaveRam = TRUE;
+      }
+    }
+
+    TestLog ("    memory map: %d ranges", Count);
+    CHECK (Sorted, "memory map ranges are sorted and do not overlap");
+    CHECK (HaveRam, "memory map has 1 MB or more of conventional memory");
+    CHECK ((AsciiStrCmp (RwMemTypeName (EfiACPIMemoryNVS), "ACPI NVS") == 0) && (AsciiStrCmp (RwMemTypeName (EfiConventionalMemory), "Conventional") == 0), "memory type names");
+    if (Ranges != NULL) {
+      FreePool (Ranges);
+    }
+  }
+
+  //
+  // Index/Data: 70h/71h is the CMOS pair, so it has to agree with the CMOS
+  // source; a write to a spare CMOS byte (38h) reads back both ways.
+  //
+  RwIndexDataSourceInit (&Ds, 0x70, 0x71);
+  CHECK ((Ds.Limit == 0xFF) && Ds.SideEffects && (AsciiStrStr (Ds.Name, "0070h/0071h") != NULL), "Index/Data source names its ports");
+  CHECK (!EFI_ERROR (RwDsRead (&Ds, 0x0D, 1, &Value)) && ((UINT8)Value == RwCmosRead8 (0x0D)), "Index/Data 70h/71h reads CMOS register D");
+  Sec = RwCmosRead8 (0x38);
+  CHECK (!EFI_ERROR (RwDsWrite (&Ds, 0x38, 1, 0x5A)) && (RwCmosRead8 (0x38) == 0x5A), "Index/Data write lands in CMOS");
+  RwCmosWrite8 (0x38, Sec);
+  CHECK (!EFI_ERROR (RwDsRead (&Ds, 0x38, 1, &Value)) && ((UINT8)Value == Sec), "Index/Data reads the restored byte");
+
+  //
   // EC: q35 has none. The probe has to come back (timeouts), not hang.
   //
   Ec = RwEcProbe (RW_EC_DEFAULT_DATA, RW_EC_DEFAULT_CMD, &Status);

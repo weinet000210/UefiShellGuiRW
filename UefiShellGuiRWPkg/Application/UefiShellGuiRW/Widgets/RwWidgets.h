@@ -777,6 +777,26 @@ RwTableAddRow (
   IN UINT8        Emphasis
   );
 
+/**
+  Replace the cells and emphasis of an existing row (Tag stays).
+**/
+EFI_STATUS
+RwTableSetRow (
+  IN RW_TABLE     *Table,
+  IN UINTN        Row,
+  IN CONST CHAR8  **Cells,
+  IN UINT8        Emphasis
+  );
+
+/**
+  Tag of Row, -1 when out of range.
+**/
+INT32
+RwTableGetTag (
+  IN RW_TABLE  *Table,
+  IN UINTN     Row
+  );
+
 UINTN
 RwTableRowCount (
   IN RW_TABLE  *Table
