@@ -15,9 +15,8 @@
 STATIC UINTN  mChecks;
 STATIC UINTN  mFailures;
 
-STATIC
 VOID
-Check (
+RwTestCheck (
   IN CONST CHAR8  *Name,
   IN BOOLEAN      Passed
   )
@@ -30,9 +29,8 @@ Check (
   RwSerialLog ("  [%a] %a\r\n", Passed ? "PASS" : "FAIL", Name);
 }
 
-STATIC
 VOID
-Pump (
+RwTestPump (
   IN UINT64  Ms
   )
 {
@@ -46,9 +44,8 @@ Pump (
   } while (UefiGuiGetTimeMs () < End);
 }
 
-STATIC
 VOID
-Key (
+RwTestKey (
   IN UINT16  ScanCode,
   IN CHAR16  Char,
   IN UINT32  Modifiers
@@ -63,13 +60,27 @@ Key (
   Event.Pressed     = TRUE;
   if (!RwKeyHandler (&Event, NULL)) {
     //
-    // Not an application key: LVGL would get it. Nothing in Phase 0 needs
-    // that path.
+    // Not an application key: LVGL would get it. The tests drive widgets
+    // through RwKeyHandler only.
     //
   }
 
-  Pump (30);
+  RwTestPump (30);
 }
+
+VOID
+RwTestType (
+  IN CONST CHAR8  *Text
+  )
+{
+  for ( ; *Text != '\0'; Text++) {
+    RwTestKey (SCAN_NULL, (CHAR16)*Text, 0);
+  }
+}
+
+#define Check  RwTestCheck
+#define Pump   RwTestPump
+#define Key    RwTestKey
 
 STATIC
 BOOLEAN
@@ -239,18 +250,13 @@ RwSelfTestRun (
   Check ("command: Close All closes every window", (BOOLEAN)(RwMdiCount () == 0 && RwMdiGetActive () == NULL));
 
   //
-  // Screen for the screenshot: three windows and the Window menu open.
+  // Widgets (hex grid, bit field view, lists, dialogs) in the widget test
+  // window; it stays open for the screenshot.
   //
-  RwRunCommand (RwCmdPci);
-  RwRunCommand (RwCmdAcpi);
-  RwRunCommand (RwCmdAbout);
-  RwRunCommand (RwCmdCascade);
-  RwMenuOpen (3);
+  RwSelfTestWidgets ();
   Pump (300);
   RwSerialLog ("UEFISHELLGUIRW: SCREEN READY\r\n");
   Pump (5000);
-  RwMenuClose ();
-  Pump (50);
 
   RwSerialLog ("%u checks, %u failed\r\n", (UINT32)mChecks, (UINT32)mFailures);
   return mFailures;
