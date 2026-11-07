@@ -1047,6 +1047,12 @@ RwHexGridSetSource (
   Grid->Source = Source;
   Grid->Cursor = 0;
   Grid->Page   = (Source != NULL) ? (Source->Base & ~(UINT64)(RW_HEXGRID_PAGE - 1)) : 0;
+  if ((Source != NULL) &&
+      ((Source->WidthMask & ((Grid->Width == 1) ? RW_DS_WIDTH_8 : (Grid->Width == 2) ? RW_DS_WIDTH_16 : RW_DS_WIDTH_32)) == 0))
+  {
+    Grid->Width = 1;      // the new space has no accesses of the current width
+  }
+
   UpdateSize (Grid);
   RwHexGridSetAutoRefresh (Grid, (BOOLEAN)((Source != NULL) && !Source->SideEffects), 0);
   Reload (Grid);
@@ -1073,6 +1079,11 @@ RwHexGridSetWidth (
   )
 {
   if ((Width != 1) && (Width != 2) && (Width != 4)) {
+    return;
+  }
+
+  if ((Grid->Source->WidthMask & ((Width == 1) ? RW_DS_WIDTH_8 : (Width == 2) ? RW_DS_WIDTH_16 : RW_DS_WIDTH_32)) == 0) {
+    RwStatusSetText ("This space has no accesses of that width.");
     return;
   }
 

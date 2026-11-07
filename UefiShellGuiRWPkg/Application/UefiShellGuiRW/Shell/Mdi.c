@@ -326,6 +326,43 @@ RwMdiInitialize (
   mCreated = 0;
 }
 
+/**
+  Resize Window so its client area is ContentWidth x ContentHeight (as far
+  as the desktop allows), keeping it on the desktop.
+**/
+VOID
+RwMdiFitContent (
+  IN RW_MDI_WINDOW  *Window,
+  IN INT32          ContentWidth,
+  IN INT32          ContentHeight
+  )
+{
+  INT32  W;
+  INT32  H;
+  INT32  X;
+  INT32  Y;
+
+  lv_obj_update_layout (Window->Obj);
+  W = ContentWidth + lv_obj_get_width (Window->Obj) - lv_obj_get_content_width (Window->Content);
+  H = ContentHeight + lv_obj_get_height (Window->Obj) - lv_obj_get_content_height (Window->Content);
+  W = MIN (MAX (W, MDI_MIN_WIDTH), DesktopWidth ());
+  H = MIN (MAX (H, MDI_MIN_HEIGHT), DesktopHeight ());
+  X = lv_obj_get_x (Window->Obj);
+  Y = lv_obj_get_y (Window->Obj);
+  if (X + W > DesktopWidth ()) {
+    X = DesktopWidth () - W;
+  }
+
+  if (Y + H > DesktopHeight ()) {
+    Y = DesktopHeight () - H;
+  }
+
+  SetGeometry (Window, X, Y, W, H);
+  SaveRestore (Window);
+  Window->PrefWidth  = W;
+  Window->PrefHeight = H;
+}
+
 RW_MDI_WINDOW *
 RwMdiCreate (
   IN CONST CHAR8     *Title,
@@ -469,6 +506,8 @@ RwMdiCreate (
 
   SetGeometry (Window, Offset, MIN (Offset, MAX (0, H - Height)), Width, Height);
   SaveRestore (Window);
+  Window->PrefWidth  = Width;
+  Window->PrefHeight = Height;
   mCreated++;
 
   for (Link = &mFirst; *Link != NULL; Link = &(*Link)->Next) {
@@ -783,16 +822,20 @@ RwMdiCascade (
   INT32          Index;
 
   NormalizeForArrange ();
-  W     = DesktopWidth () * 2 / 3;
-  H     = DesktopHeight () * 2 / 3;
   Index = 0;
   for (Window = mFirst; Window != NULL; Window = Window->Next) {
     if (Window->Minimized) {
       continue;
     }
 
+    //
+    // Each window keeps the size its view asked for (a hex grid has a
+    // natural width), as far as the desktop allows at its step.
+    //
     Step = (Index % 10) * MDI_CASCADE_STEP;
-    SetGeometry (Window, Step, Step, W, H);
+    W    = MIN (Window->PrefWidth, DesktopWidth () - Step);
+    H    = MIN (Window->PrefHeight, DesktopHeight () - Step);
+    SetGeometry (Window, Step, Step, MAX (W, MDI_MIN_WIDTH), MAX (H, MDI_MIN_HEIGHT));
     SaveRestore (Window);
     lv_obj_move_foreground (Window->Obj);
     Index++;

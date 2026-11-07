@@ -851,6 +851,41 @@ RwTableClear (
   RwVListSetRowCount (Table->List, 0);
 }
 
+STATIC
+CHAR8 **
+TableBuildCells (
+  IN CONST CHAR8  **Cells,
+  IN UINTN        Columns
+  )
+{
+  UINTN  Size;
+  UINTN  Column;
+  UINTN  Len;
+  CHAR8  **Block;
+  CHAR8  *Text;
+
+  Size = Columns * sizeof (CHAR8 *);
+  for (Column = 0; Column < Columns; Column++) {
+    Size += AsciiStrLen ((Cells[Column] != NULL) ? Cells[Column] : "") + 1;
+  }
+
+  Block = AllocatePool (Size);
+  if (Block == NULL) {
+    return NULL;
+  }
+
+  Text = (CHAR8 *)(Block + Columns);
+  for (Column = 0; Column < Columns; Column++) {
+    Len = AsciiStrLen ((Cells[Column] != NULL) ? Cells[Column] : "");
+    CopyMem (Text, (Cells[Column] != NULL) ? Cells[Column] : "", Len);
+    Text[Len]     = '\0';
+    Block[Column] = Text;
+    Text         += Len + 1;
+  }
+
+  return Block;
+}
+
 EFI_STATUS
 RwTableAddRow (
   IN RW_TABLE     *Table,
@@ -859,15 +894,9 @@ RwTableAddRow (
   IN UINT8        Emphasis
   )
 {
-  UINTN      Columns;
-  UINTN      Size;
-  UINTN      Column;
-  UINTN      Len;
   CHAR8      **Block;
-  CHAR8      *Text;
   TABLE_ROW  *Grown;
 
-  Columns = Table->List->ColumnCount;
   if (Table->Count == Table->Capacity) {
     Grown = ReallocatePool (
               Table->Capacity * sizeof (TABLE_ROW),
@@ -882,23 +911,9 @@ RwTableAddRow (
     Table->Capacity += 64;
   }
 
-  Size = Columns * sizeof (CHAR8 *);
-  for (Column = 0; Column < Columns; Column++) {
-    Size += AsciiStrLen ((Cells[Column] != NULL) ? Cells[Column] : "") + 1;
-  }
-
-  Block = AllocatePool (Size);
+  Block = TableBuildCells (Cells, Table->List->ColumnCount);
   if (Block == NULL) {
     return EFI_OUT_OF_RESOURCES;
-  }
-
-  Text = (CHAR8 *)(Block + Columns);
-  for (Column = 0; Column < Columns; Column++) {
-    Len = AsciiStrLen ((Cells[Column] != NULL) ? Cells[Column] : "");
-    CopyMem (Text, (Cells[Column] != NULL) ? Cells[Column] : "", Len);
-    Text[Len]     = '\0';
-    Block[Column] = Text;
-    Text         += Len + 1;
   }
 
   Table->Rows[Table->Count].Cells    = Block;
@@ -907,6 +922,41 @@ RwTableAddRow (
   Table->Count++;
   RwVListSetRowCount (Table->List, Table->Count);
   return EFI_SUCCESS;
+}
+
+EFI_STATUS
+RwTableSetRow (
+  IN RW_TABLE     *Table,
+  IN UINTN        Row,
+  IN CONST CHAR8  **Cells,
+  IN UINT8        Emphasis
+  )
+{
+  CHAR8  **Block;
+
+  if (Row >= Table->Count) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Block = TableBuildCells (Cells, Table->List->ColumnCount);
+  if (Block == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  FreePool (Table->Rows[Row].Cells);
+  Table->Rows[Row].Cells    = Block;
+  Table->Rows[Row].Emphasis = Emphasis;
+  RwVListInvalidate (Table->List);
+  return EFI_SUCCESS;
+}
+
+INT32
+RwTableGetTag (
+  IN RW_TABLE  *Table,
+  IN UINTN     Row
+  )
+{
+  return (Row < Table->Count) ? Table->Rows[Row].Tag : -1;
 }
 
 UINTN

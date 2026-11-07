@@ -40,6 +40,15 @@
   Views/About.c
   Views/WidgetTest.h
   Views/WidgetTest.c
+  Views/Views.h
+  Views/SpaceView.c
+  Views/PciView.c
+  Views/MemoryView.c
+  Views/IoView.c
+  Views/IndexDataView.c
+  Views/CmosView.c
+  Views/MsrView.c
+  SelfTestViews.c
 
 [Packages]
   MdePkg/MdePkg.dec
