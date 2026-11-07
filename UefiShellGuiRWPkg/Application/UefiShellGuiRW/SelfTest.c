@@ -157,10 +157,10 @@ RwSelfTestRun (
   for (Index = 0; Index < 3; Index++) {
     Window = RwMdiGetAt (Index);
     Ok    &= (BOOLEAN)(lv_obj_get_x (Window->Obj) == (INT32)Index * 22 && lv_obj_get_y (Window->Obj) == (INT32)Index * 22);
-    Ok    &= (BOOLEAN)(lv_obj_get_width (Window->Obj) == DesktopW * 2 / 3);
+    Ok    &= (BOOLEAN)(lv_obj_get_width (Window->Obj) == MIN (Window->PrefWidth, DesktopW - (INT32)Index * 22));
   }
 
-  Check ("mdi: cascade places windows 22 px apart, 2/3 of the desktop", Ok);
+  Check ("mdi: cascade places windows 22 px apart at their own size", Ok);
   Check ("mdi: cascade keeps the active window", (BOOLEAN)(RwMdiGetActive () == Pci));
 
   RwRunCommand (RwCmdTileV);
@@ -254,6 +254,13 @@ RwSelfTestRun (
   // window; it stays open for the screenshot.
   //
   RwSelfTestWidgets ();
+  RwRunCommand (RwCmdCloseAll);
+  Pump (50);
+
+  //
+  // Phase 3 module windows; they stay open (cascaded) for the screenshot.
+  //
+  RwSelfTestViews ();
   Pump (300);
   RwSerialLog ("UEFISHELLGUIRW: SCREEN READY\r\n");
   Pump (5000);

@@ -8,6 +8,7 @@
 |  Shell/   main frame: menu bar, toolbar, MDI desktop,        |
 |           status bar, command table, key handling            |
 |  Views/   content of each child window (one file per module) |
+|           Phase 3: PCI, Memory, I/O, Index/Data, CMOS, MSR   |
 |  Widgets/ (Phase 2) HexGrid, BitFieldView, TreeView,         |
 |           PropertyTable, dialogs                             |
 +------------------------------+-------------------------------+
@@ -68,3 +69,5 @@ the mouse and keyboard reach (commands, toolbar click events, the key
 handler) and checks window geometry and state. CI runs it in QEMU for DEBUG
 and RELEASE and keeps a screenshot.
 Widget details: [Widgets.md](Widgets.md).
+
+Module windows: [Views.md](Views.md).

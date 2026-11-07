@@ -27,14 +27,14 @@ and VS2022 and its tests pass in CI (QEMU + OVMF).
 | 0 | Skeleton: package, LVGLUefiGuiPkg submodule, build scripts, CI; RW-style main window (menu bar, toolbar, MDI desktop, status bar), child window manager, self test | Done |
 | 1 | RwCoreLib: hardware access and table parsers ported from uefirrw, no UI; RwCoreTest checks it in QEMU | Done |
 | 2 | Common widgets: HexGrid over a DataSource (byte/word/dword, edit, auto refresh), bit field view, tree, property table, table, text view, dialogs, keyboard focus; DejaVu Sans Mono font | Done |
-| 3 | Raw spaces: PCI list + config space, Memory, I/O, Index/Data, CMOS, CPU MSR | Planned |
+| 3 | Raw spaces: PCI list + config space, Memory (with memory map), I/O, Index/Data, CMOS (with RTC decode), CPU MSR | Done |
 | 4 | Decoders: PCI capabilities, PCIe tree, ACPI + ASL, SMBIOS, USB | Planned |
 | 5 | Devices: Super I/O, EC, COM port; SMBus/SPD, ATA/NVMe identify, EDID, MSR per CPU | Planned |
 | 6 | Tools: screenshot, dump all, register snapshots and compare, write log, file browser/editor | Planned |
 | 7 | Real hardware validation, performance, v1.0 | Planned |
 
-Write policy (from Phase 3): ordinary registers are written when you confirm
-the edit; dangerous ones (CF9h reset, MSRs, BARs, bridge bus numbers,
+Write policy: ordinary registers are written when you finish typing the
+value; dangerous ones (CF9h reset, MSRs, BARs, bridge bus numbers,
 SPI/ACPI regions) ask for confirmation first.
 
 ## Using it
