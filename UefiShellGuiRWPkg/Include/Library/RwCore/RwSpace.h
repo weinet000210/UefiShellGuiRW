@@ -38,6 +38,34 @@ RwMemIsDangerous (
   );
 
 /**
+  One range of the UEFI memory map; adjacent descriptors of the same type
+  and attributes are merged.
+**/
+typedef struct {
+  UINT64    Start;
+  UINT64    Pages;
+  UINT64    Attribute;
+  UINT32    Type;          // EFI_MEMORY_TYPE
+} RW_MEM_RANGE;
+
+/**
+  The memory map sorted by address. FreePool *Ranges.
+**/
+EFI_STATUS
+RwMemMapGet (
+  OUT RW_MEM_RANGE  **Ranges,
+  OUT UINTN         *Count
+  );
+
+/**
+  Short name of an EFI memory type ("Conventional", "ACPI NVS", ...).
+**/
+CONST CHAR8 *
+RwMemTypeName (
+  IN UINT32  Type
+  );
+
+/**
   I/O ports 0000h-FFFFh. Writes to CF9h (reset control), 92h (fast reset)
   and 64h (keyboard controller command, FEh resets) are dangerous.
 **/
@@ -64,6 +92,20 @@ RwCmosWrite8 (
 VOID
 RwCmosSourceInit (
   OUT RW_DATA_SOURCE  *Source
+  );
+
+/**
+  A generic index / data port pair, 8-bit index and 8-bit data, registers
+  00h-FFh: a read writes the index port then reads the data port, a write
+  writes the index port then the data port. Both ports are I/O ports.
+  Reads talk to the hardware (SideEffects); nothing is dangerous here, the
+  caller warns about pairs it knows (for example a reset port).
+**/
+VOID
+RwIndexDataSourceInit (
+  OUT RW_DATA_SOURCE  *Source,
+  IN  UINT16          IndexPort,
+  IN  UINT16          DataPort
   );
 
 /**

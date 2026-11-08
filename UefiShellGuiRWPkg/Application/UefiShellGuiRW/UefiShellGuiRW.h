@@ -26,8 +26,8 @@
 #include <Library/UefiGuiRuntimeLib.h>
 
 #define RW_APP_NAME     "UefiShellGuiRW"
-#define RW_APP_VERSION  "0.0.2"
-#define RW_APP_PHASE    "Phase 2"
+#define RW_APP_VERSION  "0.0.3"
+#define RW_APP_PHASE    "Phase 3"
 
 //
 // Colors of the classic Windows look RW-Everything uses.
@@ -248,6 +248,8 @@ struct _RW_MDI_WINDOW {
   BOOLEAN                  Maximized;
   BOOLEAN                  Minimized;
   lv_area_t                Restore;     ///< Normal geometry (desktop coordinates).
+  INT32                    PrefWidth;   ///< Size the view asked for; Cascade uses it.
+  INT32                    PrefHeight;
   RW_MDI_CLOSE_CALLBACK    OnClose;
   RW_MDI_CALLBACK          OnRefresh;   ///< File > Refresh (F5) while active, or NULL.
   VOID                     *Context;
@@ -268,6 +270,13 @@ RwMdiCreate (
   IN RW_COMMAND_ID   Command,
   IN INT32           Width,
   IN INT32           Height
+  );
+
+VOID
+RwMdiFitContent (
+  IN RW_MDI_WINDOW  *Window,
+  IN INT32          ContentWidth,
+  IN INT32          ContentHeight
   );
 
 VOID
@@ -409,6 +418,11 @@ RwTestType (
 
 VOID
 RwSelfTestWidgets (
+  VOID
+  );
+
+VOID
+RwSelfTestViews (
   VOID
   );
 

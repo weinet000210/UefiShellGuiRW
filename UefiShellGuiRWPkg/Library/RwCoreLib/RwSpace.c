@@ -176,6 +176,113 @@ RwMemSourceInit (
   Source->IsDangerous = MemDsIsDangerous;
 }
 
+EFI_STATUS
+RwMemMapGet (
+  OUT RW_MEM_RANGE  **Ranges,
+  OUT UINTN         *Count
+  )
+{
+  EFI_MEMORY_DESCRIPTOR  *Map;
+  EFI_MEMORY_DESCRIPTOR  *Desc;
+  UINTN                  MapSize;
+  UINTN                  MapKey;
+  UINTN                  DescSize;
+  UINT32                 DescVersion;
+  EFI_STATUS             Status;
+  UINTN                  Offset;
+  UINTN                  Used;
+  UINTN                  Index;
+  UINTN                  Pos;
+  RW_MEM_RANGE           *Out;
+  RW_MEM_RANGE           Item;
+  RW_MEM_RANGE           *Last;
+
+  *Ranges = NULL;
+  *Count  = 0;
+  MapSize = 0;
+  Status  = gBS->GetMemoryMap (&MapSize, NULL, &MapKey, &DescSize, &DescVersion);
+  if (Status != EFI_BUFFER_TOO_SMALL) {
+    return EFI_ERROR (Status) ? Status : EFI_NOT_FOUND;
+  }
+
+  MapSize += 8 * DescSize;
+  Map      = AllocatePool (MapSize);
+  if (Map == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  Status = gBS->GetMemoryMap (&MapSize, Map, &MapKey, &DescSize, &DescVersion);
+  if (EFI_ERROR (Status)) {
+    FreePool (Map);
+    return Status;
+  }
+
+  Out = AllocatePool ((MapSize / DescSize + 1) * sizeof (RW_MEM_RANGE));
+  if (Out == NULL) {
+    FreePool (Map);
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  //
+  // Insertion sort by start address (firmware maps are nearly sorted).
+  //
+  Used = 0;
+  for (Offset = 0; Offset + DescSize <= MapSize; Offset += DescSize) {
+    Desc           = (EFI_MEMORY_DESCRIPTOR *)((UINT8 *)Map + Offset);
+    Item.Start     = Desc->PhysicalStart;
+    Item.Pages     = Desc->NumberOfPages;
+    Item.Attribute = Desc->Attribute;
+    Item.Type      = Desc->Type;
+    Pos            = Used;
+    while ((Pos > 0) && (Out[Pos - 1].Start > Item.Start)) {
+      Out[Pos] = Out[Pos - 1];
+      Pos--;
+    }
+
+    Out[Pos] = Item;
+    Used++;
+  }
+
+  FreePool (Map);
+
+  //
+  // Merge neighbours of the same type and attributes.
+  //
+  Pos = 0;
+  for (Index = 0; Index < Used; Index++) {
+    if (Pos > 0) {
+      Last = &Out[Pos - 1];
+      if ((Last->Type == Out[Index].Type) && (Last->Attribute == Out[Index].Attribute) &&
+          (Last->Start + LShiftU64 (Last->Pages, EFI_PAGE_SHIFT) == Out[Index].Start))
+      {
+        Last->Pages += Out[Index].Pages;
+        continue;
+      }
+    }
+
+    Out[Pos++] = Out[Index];
+  }
+
+  *Ranges = Out;
+  *Count  = Pos;
+  return EFI_SUCCESS;
+}
+
+CONST CHAR8 *
+RwMemTypeName (
+  IN UINT32  Type
+  )
+{
+  STATIC CONST CHAR8  *Names[] = {
+    "Reserved",     "Loader Code",  "Loader Data", "BS Code",   "BS Data",
+    "RT Code",      "RT Data",      "Conventional", "Unusable", "ACPI Reclaim",
+    "ACPI NVS",     "MMIO",         "MMIO Port",   "PAL Code",  "Persistent",
+    "Unaccepted"
+  };
+
+  return (Type < ARRAY_SIZE (Names)) ? Names[Type] : "OEM/OS";
+}
+
 //
 // ---- I/O ports -------------------------------------------------------------
 //
@@ -347,6 +454,74 @@ RwCmosSourceInit (
   Source->SideEffects = TRUE;
   Source->Read        = CmosDsRead;
   Source->Write       = CmosDsWrite;
+}
+
+//
+// ---- Index / data port pair ------------------------------------------------
+//
+
+typedef struct {
+  UINT16    IndexPort;
+  UINT16    DataPort;
+} INDEX_DATA_CTX;
+
+STATIC
+EFI_STATUS
+EFIAPI
+IndexDataDsRead (
+  IN  RW_DATA_SOURCE  *Source,
+  IN  UINT64          Address,
+  IN  UINTN           Width,
+  OUT UINT64          *Value
+  )
+{
+  INDEX_DATA_CTX  *Ctx;
+
+  Ctx = (INDEX_DATA_CTX *)Source->Ctx;
+  IoWrite8 (Ctx->IndexPort, (UINT8)Address);
+  *Value = IoRead8 (Ctx->DataPort);
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+IndexDataDsWrite (
+  IN RW_DATA_SOURCE  *Source,
+  IN UINT64          Address,
+  IN UINTN           Width,
+  IN UINT64          Value
+  )
+{
+  INDEX_DATA_CTX  *Ctx;
+
+  Ctx = (INDEX_DATA_CTX *)Source->Ctx;
+  IoWrite8 (Ctx->IndexPort, (UINT8)Address);
+  IoWrite8 (Ctx->DataPort, (UINT8)Value);
+  return EFI_SUCCESS;
+}
+
+VOID
+RwIndexDataSourceInit (
+  OUT RW_DATA_SOURCE  *Source,
+  IN  UINT16          IndexPort,
+  IN  UINT16          DataPort
+  )
+{
+  INDEX_DATA_CTX  *Ctx;
+
+  ZeroMem (Source, sizeof (*Source));
+  AsciiSPrint (Source->Name, sizeof (Source->Name), "Index/Data %04Xh/%04Xh", IndexPort, DataPort);
+  Source->Base        = 0;
+  Source->Limit       = 0xFF;
+  Source->AddrDigits  = 2;
+  Source->WidthMask   = RW_DS_WIDTH_8;
+  Source->SideEffects = TRUE;
+  Source->Read        = IndexDataDsRead;
+  Source->Write       = IndexDataDsWrite;
+  Ctx                 = (INDEX_DATA_CTX *)Source->Ctx;
+  Ctx->IndexPort      = IndexPort;
+  Ctx->DataPort       = DataPort;
 }
 
 //

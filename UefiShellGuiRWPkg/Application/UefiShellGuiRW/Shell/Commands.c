@@ -6,6 +6,7 @@
 **/
 
 #include "../UefiShellGuiRW.h"
+#include "../Views/Views.h"
 
 STATIC CONST RW_COMMAND  mCommands[] = {
   { RwCmdNone,       "",                          NULL,       NULL,             NULL      },
@@ -13,12 +14,12 @@ STATIC CONST RW_COMMAND  mCommands[] = {
   { RwCmdScreenshot, "Save Screenshot",           "F12",      &gIconScreenshot, "Phase 6" },
   { RwCmdDumpAll,    "Dump All to File",          NULL,       &gIconDumpAll,    "Phase 6" },
   { RwCmdExit,       "Exit",                      "Alt+X",    &gIconExit,       NULL      },
-  { RwCmdPci,        "PCI Devices",               NULL,       &gIconPci,        "Phase 3" },
-  { RwCmdMemory,     "Memory",                    NULL,       &gIconMemory,     "Phase 3" },
-  { RwCmdIo,         "I/O Space",                 NULL,       &gIconIo,         "Phase 3" },
-  { RwCmdIndexData,  "Index/Data",                NULL,       &gIconIndexData,  "Phase 3" },
-  { RwCmdCmos,       "CMOS",                      NULL,       &gIconCmos,       "Phase 3" },
-  { RwCmdMsr,        "CPU MSR",                   NULL,       &gIconMsr,        "Phase 3" },
+  { RwCmdPci,        "PCI Devices",               NULL,       &gIconPci,        NULL      },
+  { RwCmdMemory,     "Memory",                    NULL,       &gIconMemory,     NULL      },
+  { RwCmdIo,         "I/O Space",                 NULL,       &gIconIo,         NULL      },
+  { RwCmdIndexData,  "Index/Data",                NULL,       &gIconIndexData,  NULL      },
+  { RwCmdCmos,       "CMOS",                      NULL,       &gIconCmos,       NULL      },
+  { RwCmdMsr,        "CPU MSR",                   NULL,       &gIconMsr,        NULL      },
   { RwCmdEc,         "Embedded Controller",       NULL,       &gIconEc,         "Phase 5" },
   { RwCmdSuperIo,    "Super I/O",                 NULL,       &gIconSuperIo,    "Phase 5" },
   { RwCmdSmbus,      "SMBus / SPD",               NULL,       &gIconSmbus,      "Phase 5" },
@@ -122,7 +123,29 @@ RwRunCommand (
 
         RwMdiActivate (Window);
       } else {
-        RwViewOpenPlaceholder (Id);
+        switch (Id) {
+          case RwCmdPci:
+            RwViewOpenPci ();
+            break;
+          case RwCmdMemory:
+            RwViewOpenMemory ();
+            break;
+          case RwCmdIo:
+            RwViewOpenIo ();
+            break;
+          case RwCmdIndexData:
+            RwViewOpenIndexData ();
+            break;
+          case RwCmdCmos:
+            RwViewOpenCmos ();
+            break;
+          case RwCmdMsr:
+            RwViewOpenMsr ();
+            break;
+          default:
+            RwViewOpenPlaceholder (Id);
+            break;
+        }
       }
 
       break;
