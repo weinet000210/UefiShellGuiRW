@@ -85,6 +85,9 @@ STATIC CONST TEST_MODULE  mModules[] = {
   { "Acpi",   TestAcpi   },
   { "Usb",    TestUsb    },
   { "Uart",   TestUart   },
+  { "Smbus",  TestSmbus  },
+  { "Storage", TestStorage },
+  { "Edid",   TestEdid   },
 };
 
 EFI_STATUS

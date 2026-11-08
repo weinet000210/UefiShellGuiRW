@@ -258,13 +258,16 @@ RwSelfTestRun (
   Pump (50);
 
   //
-  // Phase 3 raw-space windows, then the Phase 4 decoder windows; the last
-  // ones stay open (cascaded) for the screenshot.
+  // Phase 3 raw-space windows, Phase 4 decoder windows, then the Phase 5
+  // device windows, which stay open (cascaded) for the screenshot.
   //
   RwSelfTestViews ();
   RwRunCommand (RwCmdCloseAll);
   Pump (50);
   RwSelfTestDecoders ();
+  RwRunCommand (RwCmdCloseAll);
+  Pump (50);
+  RwSelfTestDevices ();
   Pump (300);
   RwSerialLog ("UEFISHELLGUIRW: SCREEN READY\r\n");
   Pump (5000);

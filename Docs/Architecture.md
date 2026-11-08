@@ -10,6 +10,7 @@
 |  Views/   content of each child window (one file per module) |
 |           Phase 3: PCI, Memory, I/O, Index/Data, CMOS, MSR   |
 |           Phase 4: PCIe Tree, ACPI, SMBIOS, USB              |
+|           Phase 5: EC, SIO, COM, SMBus/SPD, Storage, EDID    |
 |  Widgets/ (Phase 2) HexGrid, BitFieldView, TreeView,         |
 |           PropertyTable, dialogs                             |
 +------------------------------+-------------------------------+

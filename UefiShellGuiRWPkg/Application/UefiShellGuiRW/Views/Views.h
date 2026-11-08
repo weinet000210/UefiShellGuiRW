@@ -325,6 +325,9 @@ typedef struct {
   BOOLEAN          Guard;
   UINT32           PendingIndex;      ///< MSR being written while the dialogs are open
   UINT64           PendingValue;
+  UINTN            CpuIndex;          ///< processor the values belong to (Phase 5)
+  UINTN            CpuCount;
+  CHAR8            Brand[64];
 } RW_MSR_VIEW;
 
 RW_MDI_WINDOW *
@@ -343,6 +346,12 @@ RwMsrViewReadAll (
   VOID
   );
 
+/** Show the MSRs of processor Cpu (Ctrl+Left / Ctrl+Right). **/
+VOID
+RwMsrViewSetCpu (
+  IN UINTN  Cpu
+  );
+
 /**
   Write an MSR the way the window does: a warning Yes / No first, then
   WRMSR and a re-read (asynchronous, the dialog decides).
@@ -358,5 +367,99 @@ UINTN
 RwMsrViewAdd (
   IN UINT32  Index
   );
+
+//
+// ---- Phase 5: devices ------------------------------------------------------
+//
+typedef struct {
+  RW_MDI_WINDOW     *Window;
+  RW_SPACE_PANE     Pane;
+  lv_obj_t          *Note;
+  RW_DATA_SOURCE    Source;
+  BOOLEAN           Present;
+  UINT8             Status;
+} RW_EC_VIEW;
+
+RW_MDI_WINDOW *RwViewOpenEc (VOID);
+RW_EC_VIEW    *RwEcViewGet (VOID);
+
+typedef struct {
+  RW_MDI_WINDOW     *Window;
+  RW_TREEVIEW       *Tree;
+  RW_SPACE_PANE     Pane;
+  lv_obj_t          *Note;
+  RW_SIO_LIST       List;
+  BOOLEAN           Found;
+  INT32             CurrentTag;
+  RW_DATA_SOURCE    Source;
+} RW_SIO_VIEW;
+
+RW_MDI_WINDOW *RwViewOpenSio (VOID);
+RW_SIO_VIEW   *RwSioViewGet (VOID);
+
+typedef struct {
+  RW_MDI_WINDOW       *Window;
+  RW_TABLE            *Ports;
+  RW_PROPTABLE        *Decode;
+  lv_obj_t            *Heading;
+  BOOLEAN             Present[RW_UART_STD_COUNT];
+  BOOLEAN             Firmware[RW_UART_STD_COUNT];
+  INT32               Current;
+  BOOLEAN             HaveResult[RW_UART_STD_COUNT];
+  RW_UART_LOOPBACK    Result[RW_UART_STD_COUNT];
+} RW_COM_VIEW;
+
+RW_MDI_WINDOW *RwViewOpenCom (VOID);
+RW_COM_VIEW   *RwComViewGet (VOID);
+
+/** Run the loopback test on COMn (Index 0..3) after asking. **/
+VOID
+RwComViewLoopback (
+  IN UINTN  Index
+  );
+
+typedef struct {
+  RW_MDI_WINDOW     *Window;
+  RW_TABLE          *Devices;
+  lv_obj_t          *Heading;
+  lv_obj_t          *Note;
+  RW_PROPTABLE      *Decode;
+  RW_SPACE_PANE     Pane;
+  RW_SMBUS          Bus;
+  EFI_STATUS        BusStatus;
+  BOOLEAN           Present[128];
+  UINTN             Count;
+  INT32             Current;         ///< SMBus address shown, -1 = none
+  RW_SPD            *Spd;            ///< SPD of Current when it is an SPD EEPROM
+  BOOLEAN           ShowSpd;         ///< the grid shows the SPD copy (else raw SMBus bytes)
+  RW_DATA_SOURCE    Source;
+} RW_SMBUS_VIEW;
+
+RW_MDI_WINDOW *RwViewOpenSmbus (VOID);
+RW_SMBUS_VIEW *RwSmbusViewGet (VOID);
+
+typedef struct {
+  RW_MDI_WINDOW      *Window;
+  RW_TABLE           *Drives;
+  RW_PROPTABLE       *Decode;
+  lv_obj_t           *Heading;
+  RW_STORAGE_LIST    *List;
+  INT32              Current;
+} RW_STORAGE_VIEW;
+
+RW_MDI_WINDOW   *RwViewOpenStorage (VOID);
+RW_STORAGE_VIEW *RwStorageViewGet (VOID);
+
+typedef struct {
+  RW_MDI_WINDOW    *Window;
+  RW_TABLE         *Displays;
+  RW_PROPTABLE     *Decode;
+  lv_obj_t         *Heading;
+  RW_EDID_LIST     *List;
+  INT32            Current;
+} RW_EDID_VIEW;
+
+RW_MDI_WINDOW *RwViewOpenEdid (VOID);
+RW_EDID_VIEW  *RwEdidViewGet (VOID);
 
 #endif

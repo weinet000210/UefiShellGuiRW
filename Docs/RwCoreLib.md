@@ -42,12 +42,15 @@ application share it.
 | `RwBase.h` | `RwStr.c`, `RwInfo.c`, `RwDataSource.c` | strings, info documents, DataSource |
 | `RwPci.h` | `RwPci.c`, `RwPciDecode.c` | config access, enumeration, tree, header/capability decode |
 | `RwSpace.h` | `RwSpace.c` | memory, I/O, CMOS and EC spaces, danger rules |
-| `RwMsr.h` | `RwMsr.c` | #GP-guarded MSR access, known MSR list, CPU brand |
+| `RwMsr.h` | `RwMsr.c` | #GP-guarded MSR access, known MSR list, CPU brand, processors and MSR access on any CPU (MP services; an AP only touches an MSR the boot processor read without #GP, 200 ms timeout) |
 | `RwSio.h` | `RwSio.c` | Super I/O probe, logical devices, config space source |
 | `RwSmbios.h` | `RwSmbios.c` | SMBIOS table walk and structure decode |
 | `RwAcpi.h` | `RwAcpi.c`, `RwAml.c` | ACPI table list and decode, AML to ASL disassembler |
 | `RwUsb.h` | `RwUsb.c` | USB controllers, device tree, descriptors |
 | `RwUart.h` | `RwUart.c` | 16550 detection, setup, send / receive, loopback test |
+| `RwSmbus.h` | `RwSmbus.c`, `RwSpd.c` | Intel ICH/PCH and AMD SB/FCH SMBus host (PIIX4 layout), enable, scan, byte read/write; SPD read with DDR4 (36h/37h) and DDR5 (MR11) paging, DDR3/4/5 decode, JEDEC IDs, CRC |
+| `RwStorage.h` | `RwStorage.c` | ATA / ATAPI IDENTIFY (ATA pass-thru), NVMe Identify Controller / Namespace (NVMe pass-thru), decoders |
+| `RwEdid.h` | `RwEdid.c` | EDID from EDID Active / Discovered, else the QEMU stdvga EDID window; EDID 1.x decode |
 
 ## Tests
 

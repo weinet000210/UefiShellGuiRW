@@ -83,4 +83,58 @@ RwCpuBrand (
   IN  UINTN  BufferSize
   );
 
+//
+// ---- Processors (EFI_MP_SERVICES_PROTOCOL) --------------------------------
+//
+typedef struct {
+  UINT32     ApicId;
+  BOOLEAN    IsBsp;
+  BOOLEAN    Enabled;
+  BOOLEAN    Healthy;
+  UINT32     Package;
+  UINT32     Core;
+  UINT32     Thread;
+} RW_CPU_INFO;
+
+/** Logical processors (1 without MP services). Numbers are 0..Count-1. **/
+UINTN
+RwCpuCount (
+  VOID
+  );
+
+/** Number of the boot processor. **/
+UINTN
+RwCpuBsp (
+  VOID
+  );
+
+EFI_STATUS
+RwCpuGetInfo (
+  IN  UINTN        Cpu,
+  OUT RW_CPU_INFO  *Info
+  );
+
+/**
+  RwMsrRead / RwMsrWrite on processor Cpu. Needs the guard. On an AP the
+  MSR is read on the boot processor first and the AP is not used when that
+  faults; the AP call times out after 200 ms.
+
+  @retval EFI_DEVICE_ERROR  #GP (no such MSR or a refused value).
+  @retval EFI_NOT_READY     the processor is disabled.
+  @retval EFI_TIMEOUT       the AP did not finish.
+**/
+EFI_STATUS
+RwMsrReadOn (
+  IN  UINTN   Cpu,
+  IN  UINT32  Index,
+  OUT UINT64  *Value
+  );
+
+EFI_STATUS
+RwMsrWriteOn (
+  IN UINTN   Cpu,
+  IN UINT32  Index,
+  IN UINT64  Value
+  );
+
 #endif

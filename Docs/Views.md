@@ -35,7 +35,28 @@ shaded). Nothing is written.
 | SMBIOS | `Views/SmbiosView.c` | Structures (type, handle, name) / structure | Decoded fields for types 0-4, 7-9, 11-13, 16, 17, 19, 32, 41, then the string set and hex. |
 | USB Devices | `Views/UsbView.c` | Controller -> port -> device tree / controller or device | Port states, new / removed marks between scans (held 10 s), device and configuration descriptors, hub port status. `F5` rescans. Only standard read requests are sent. |
 
+## Phase 5
+
+Device windows. Writes that can hurt (every SMBus write, MSR writes on any
+CPU, turning the SMBus host on) ask first with No as the default.
+
+| Window | File | Content |
+|---|---|---|
+| Embedded Controller | `Views/EcView.c` | EC RAM 00h-FFh through 62h / 66h as a hex grid; without an EC only a note (no grid, nothing waits on timeouts). |
+| Super I/O | `Views/SioView.c` | Chips on 2Eh / 4Eh with their logical devices (tree) / config registers of the selected LDN or the global registers as a hex grid. |
+| COM Ports | `Views/ComView.c` | COM1-COM4 with UART presence and the firmware console / line settings, line and modem status. `L` runs the internal loopback test (nothing on the wire; a port with the firmware console asks first, the console is paused meanwhile). |
+| SMBus / SPD | `Views/SmbusView.c` | Devices that answer, with address hints and SPD module summaries / SPD decode above a hex grid. The grid shows the read-only SPD copy (all pages) or, with `Ctrl+T`, the raw registers. `E` turns on a host controller the firmware left off. |
+| ATA / NVMe Identify | `Views/StorageView.c` | NVMe controllers with their active namespaces, ATA and ATAPI drives / decoded identify data and raw bytes. `F5` identifies again. |
+| Monitor EDID | `Views/EdidView.c` | Displays / EDID decode (vendor, timings, descriptors, extensions, checksums) and raw bytes. |
+| CPU MSR (extended) | `Views/MsrView.c` | `Ctrl+Left` / `Ctrl+Right` switch the processor; reads and writes run on that CPU. |
+
 ## Tests
+
+`SelfTestDevices.c` runs on a q35 machine with two CPUs, the AHCI disk and a
+64 MiB NVMe drive (serial RWNVME01): EC and Super I/O notes, COM1 settings
+(COM1 carries the test log, so it is never put in loopback), enabling the
+SMBus host and the eight SPD EEPROMs, `Ctrl+T`, NVMe and ATA identify, the
+QEMU EDID and the AP's IA32_APIC_BASE.
 
 `SelfTestDecoders.c` checks the PCIe Tree (decode, PCI Express capability,
 both jumps into PCI Devices), ACPI (checksums, FADT fields, DSDT as ASL,
@@ -52,3 +73,5 @@ adding MSRs and writing IA32_PAT back with its own value.
 ![Phase 3 windows in QEMU at 1024x768](Images/phase3-views.png)
 
 ![Phase 4 windows in QEMU at 1024x768](Images/phase4-decoders.png)
+
+![Phase 5 windows in QEMU at 1024x768](Images/phase5-devices.png)
