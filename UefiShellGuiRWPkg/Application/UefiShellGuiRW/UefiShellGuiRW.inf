@@ -52,8 +52,15 @@
   Views/AcpiView.c
   Views/SmbiosView.c
   Views/UsbView.c
+  Views/EcView.c
+  Views/SioView.c
+  Views/ComView.c
+  Views/SmbusView.c
+  Views/StorageView.c
+  Views/EdidView.c
   SelfTestViews.c
   SelfTestDecoders.c
+  SelfTestDevices.c
 
 [Packages]
   MdePkg/MdePkg.dec

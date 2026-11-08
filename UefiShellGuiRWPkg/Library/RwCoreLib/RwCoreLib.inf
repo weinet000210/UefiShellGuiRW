@@ -29,6 +29,10 @@
   RwAml.c
   RwUsb.c
   RwUart.c
+  RwSmbus.c
+  RwSpd.c
+  RwStorage.c
+  RwEdid.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -55,6 +59,12 @@
   gEfiDevicePathProtocolGuid                    ## SOMETIMES_CONSUMES
   gEfiSerialIoProtocolGuid                      ## SOMETIMES_CONSUMES
   gEfiSioProtocolGuid                           ## SOMETIMES_CONSUMES
+  gEfiMpServiceProtocolGuid                     ## SOMETIMES_CONSUMES
+  gEfiAtaPassThruProtocolGuid                   ## SOMETIMES_CONSUMES
+  gEfiNvmExpressPassThruProtocolGuid            ## SOMETIMES_CONSUMES
+  gEfiGraphicsOutputProtocolGuid                ## SOMETIMES_CONSUMES
+  gEfiEdidActiveProtocolGuid                    ## SOMETIMES_CONSUMES
+  gEfiEdidDiscoveredProtocolGuid                ## SOMETIMES_CONSUMES
 
 [Guids]
   gEfiSmbiosTableGuid                           ## SOMETIMES_CONSUMES

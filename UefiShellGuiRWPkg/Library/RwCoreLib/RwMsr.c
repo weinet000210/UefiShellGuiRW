@@ -1,5 +1,6 @@
 /** @file
-  RwCoreLib MSR: #GP-guarded MSR access (boot processor only).
+  RwCoreLib MSR: #GP-guarded MSR access on the boot processor and, through
+  EFI_MP_SERVICES_PROTOCOL, on the application processors.
 
   Copyright (c) 2026, Niall Tseng. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -7,6 +8,8 @@
 
 #include "RwCoreInternal.h"
 #include <Protocol/Cpu.h>
+#include <Pi/PiMultiPhase.h>
+#include <Protocol/MpService.h>
 
 STATIC CONST RW_MSR_KNOWN  mKnown[] = {
   { 0x00000010, "IA32_TIME_STAMP_COUNTER" },
@@ -199,4 +202,196 @@ RwCpuBrand (
   }
 
   AsciiStrnCpyS (Buffer, BufferSize, Start, BufferSize - 1);
+}
+
+//
+// ---- Processors ------------------------------------------------------------
+//
+// AP accesses run one at a time (StartupThisAP, blocking) under the same
+// #GP guard: the AP uses the boot processor's IDT, so the handler applies.
+// An MSR is only touched on an AP after the same MSR was read on the boot
+// processor without a fault, and every AP call has a timeout.
+//
+#define RW_AP_TIMEOUT_US  200000
+
+typedef struct {
+  UINT32       Index;
+  BOOLEAN      Write;
+  UINT64       Value;
+  EFI_STATUS   Status;
+} MSR_AP_ARG;
+
+STATIC EFI_MP_SERVICES_PROTOCOL  *mMp;
+STATIC BOOLEAN                   mMpLooked;
+
+STATIC
+EFI_MP_SERVICES_PROTOCOL *
+Mp (
+  VOID
+  )
+{
+  if (!mMpLooked) {
+    mMpLooked = TRUE;
+    if (EFI_ERROR (gBS->LocateProtocol (&gEfiMpServiceProtocolGuid, NULL, (VOID **)&mMp))) {
+      mMp = NULL;
+    }
+  }
+
+  return mMp;
+}
+
+UINTN
+RwCpuCount (
+  VOID
+  )
+{
+  UINTN  Total;
+  UINTN  Enabled;
+
+  if ((Mp () == NULL) || EFI_ERROR (mMp->GetNumberOfProcessors (mMp, &Total, &Enabled)) || (Total == 0)) {
+    return 1;
+  }
+
+  return Total;
+}
+
+UINTN
+RwCpuBsp (
+  VOID
+  )
+{
+  UINTN  Self;
+
+  if ((Mp () == NULL) || EFI_ERROR (mMp->WhoAmI (mMp, &Self))) {
+    return 0;
+  }
+
+  return Self;
+}
+
+EFI_STATUS
+RwCpuGetInfo (
+  IN  UINTN        Cpu,
+  OUT RW_CPU_INFO  *Info
+  )
+{
+  EFI_PROCESSOR_INFORMATION  Pi;
+
+  ZeroMem (Info, sizeof (*Info));
+  if (Mp () == NULL) {
+    if (Cpu != 0) {
+      return EFI_NOT_FOUND;
+    }
+
+    Info->IsBsp   = TRUE;
+    Info->Enabled = TRUE;
+    Info->Healthy = TRUE;
+    return EFI_SUCCESS;
+  }
+
+  if (EFI_ERROR (mMp->GetProcessorInfo (mMp, Cpu, &Pi))) {
+    return EFI_NOT_FOUND;
+  }
+
+  Info->ApicId  = (UINT32)Pi.ProcessorId;
+  Info->IsBsp   = (BOOLEAN)((Pi.StatusFlag & PROCESSOR_AS_BSP_BIT) != 0);
+  Info->Enabled = (BOOLEAN)((Pi.StatusFlag & PROCESSOR_ENABLED_BIT) != 0);
+  Info->Healthy = (BOOLEAN)((Pi.StatusFlag & PROCESSOR_HEALTH_STATUS_BIT) != 0);
+  Info->Package = Pi.Location.Package;
+  Info->Core    = Pi.Location.Core;
+  Info->Thread  = Pi.Location.Thread;
+  return EFI_SUCCESS;
+}
+
+STATIC
+VOID
+EFIAPI
+MsrOnAp (
+  IN OUT VOID  *Buffer
+  )
+{
+  MSR_AP_ARG  *Arg;
+
+  Arg      = (MSR_AP_ARG *)Buffer;
+  mFaulted = FALSE;
+  if (Arg->Write) {
+    AsmWriteMsr64 (Arg->Index, Arg->Value);
+  } else {
+    Arg->Value = AsmReadMsr64 (Arg->Index);
+  }
+
+  Arg->Status = mFaulted ? EFI_DEVICE_ERROR : EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+RunOn (
+  IN     UINTN       Cpu,
+  IN OUT MSR_AP_ARG  *Arg
+  )
+{
+  UINT64       Probe;
+  EFI_STATUS   Status;
+  RW_CPU_INFO  Info;
+
+  if (!mGuardInstalled) {
+    return EFI_UNSUPPORTED;
+  }
+
+  if ((Mp () == NULL) || (Cpu == RwCpuBsp ())) {
+    return Arg->Write ? RwMsrWrite (Arg->Index, Arg->Value) : RwMsrRead (Arg->Index, &Arg->Value);
+  }
+
+  if (EFI_ERROR (RwCpuGetInfo (Cpu, &Info)) || !Info.Enabled) {
+    return EFI_NOT_READY;
+  }
+
+  //
+  // Never send an AP to an MSR the boot processor faults on.
+  //
+  Status = RwMsrRead (Arg->Index, &Probe);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Arg->Status = EFI_DEVICE_ERROR;
+  Status      = mMp->StartupThisAP (mMp, MsrOnAp, Cpu, NULL, RW_AP_TIMEOUT_US, Arg, NULL);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  return Arg->Status;
+}
+
+EFI_STATUS
+RwMsrReadOn (
+  IN  UINTN   Cpu,
+  IN  UINT32  Index,
+  OUT UINT64  *Value
+  )
+{
+  MSR_AP_ARG  Arg;
+  EFI_STATUS  Status;
+
+  ZeroMem (&Arg, sizeof (Arg));
+  Arg.Index = Index;
+  Status    = RunOn (Cpu, &Arg);
+  *Value    = EFI_ERROR (Status) ? 0 : Arg.Value;
+  return Status;
+}
+
+EFI_STATUS
+RwMsrWriteOn (
+  IN UINTN   Cpu,
+  IN UINT32  Index,
+  IN UINT64  Value
+  )
+{
+  MSR_AP_ARG  Arg;
+
+  ZeroMem (&Arg, sizeof (Arg));
+  Arg.Index = Index;
+  Arg.Write = TRUE;
+  Arg.Value = Value;
+  return RunOn (Cpu, &Arg);
 }

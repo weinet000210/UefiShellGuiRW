@@ -53,5 +53,8 @@ VOID TestSmbios (VOID);
 VOID TestAcpi   (VOID);
 VOID TestUsb    (VOID);
 VOID TestUart   (VOID);
+VOID TestSmbus  (VOID);
+VOID TestStorage (VOID);
+VOID TestEdid   (VOID);
 
 #endif

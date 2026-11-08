@@ -27,6 +27,9 @@
   TestAcpi.c
   TestUsb.c
   TestUart.c
+  TestSmbus.c
+  TestStorage.c
+  TestEdid.c
 
 [Packages]
   MdePkg/MdePkg.dec

@@ -20,5 +20,8 @@
 #include <Library/RwCore/RwAcpi.h>
 #include <Library/RwCore/RwUsb.h>
 #include <Library/RwCore/RwUart.h>
+#include <Library/RwCore/RwSmbus.h>
+#include <Library/RwCore/RwStorage.h>
+#include <Library/RwCore/RwEdid.h>
 
 #endif

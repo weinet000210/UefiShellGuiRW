@@ -43,19 +43,26 @@ jobs:
       - name: Build DEBUG and RELEASE
         run: EDK2_DIR="$GITHUB_WORKSPACE/edk2" WORKSPACE="$GITHUB_WORKSPACE/Build-rw" UefiShellGuiRW/scripts/build.sh DEBUG RELEASE
 
+      # Test machine: q35 with two processors, an AHCI disk (the ESP) and a
+      # 64 MiB NVMe drive (serial RWNVME01).
+      - name: NVMe test image
+        run: truncate -s 64M nvme.img
+
       # RwCoreTest checks RwCoreLib against the q35 machine's known hardware
-      # (PCI, CMOS, MSR, SMBIOS, ACPI + AML, USB, COM1) and prints RWCORETEST: PASS.
+      # (PCI, CMOS, MSR on both CPUs, SMBIOS, ACPI + AML, USB, COM1, SMBus/SPD, ATA/NVMe identify, EDID) and prints RWCORETEST: PASS.
       - name: RwCoreLib checks (DEBUG)
         run: |
           UefiShellGuiRW/LVGLUefiGuiPkg/scripts/run-qemu.sh \
             Build-rw/Build/UefiShellGuiRWPkg/DEBUG_GCC/X64/RwCoreTest.efi --smoke RWCORETEST \
-            -device pcie-root-port,id=rp1,chassis=1 -device virtio-rng-pci,bus=rp1
+            -device pcie-root-port,id=rp1,chassis=1 -device virtio-rng-pci,bus=rp1 \
+            -smp 2 -drive file=nvme.img,if=none,id=nv0,format=raw -device nvme,serial=RWNVME01,drive=nv0
 
       - name: RwCoreLib checks (RELEASE)
         run: |
           UefiShellGuiRW/LVGLUefiGuiPkg/scripts/run-qemu.sh \
             Build-rw/Build/UefiShellGuiRWPkg/RELEASE_GCC/X64/RwCoreTest.efi --smoke RWCORETEST \
-            -device pcie-root-port,id=rp1,chassis=1 -device virtio-rng-pci,bus=rp1
+            -device pcie-root-port,id=rp1,chassis=1 -device virtio-rng-pci,bus=rp1 \
+            -smp 2 -drive file=nvme.img,if=none,id=nv0,format=raw -device nvme,serial=RWNVME01,drive=nv0
 
       # The self test drives the menu bar, toolbar, MDI windows and keyboard
       # handling inside the application and prints UEFISHELLGUIRW: PASS.
@@ -63,7 +70,8 @@ jobs:
         run: |
           UefiShellGuiRW/LVGLUefiGuiPkg/scripts/run-qemu.sh \
             Build-rw/Build/UefiShellGuiRWPkg/DEBUG_GCC/X64/UefiShellGuiRW.efi --smoke UEFISHELLGUIRW \
-            --args "-selftest"
+            --args "-selftest" \
+            -smp 2 -drive file=nvme.img,if=none,id=nv0,format=raw -device nvme,serial=RWNVME01,drive=nv0
 
       - name: Self test (RELEASE) with screenshot
         run: |
@@ -71,7 +79,8 @@ jobs:
           UefiShellGuiRW/LVGLUefiGuiPkg/scripts/run-qemu.sh \
             Build-rw/Build/UefiShellGuiRWPkg/RELEASE_GCC/X64/UefiShellGuiRW.efi --smoke UEFISHELLGUIRW \
             --args "-selftest" \
-            --screenshot screenshots/mainframe-1024x768.png --after "UEFISHELLGUIRW: SCREEN READY"
+            --screenshot screenshots/mainframe-1024x768.png --after "UEFISHELLGUIRW: SCREEN READY" \
+            -smp 2 -drive file=nvme.img,if=none,id=nv0,format=raw -device nvme,serial=RWNVME01,drive=nv0
           test -s screenshots/mainframe-1024x768.png
 
       - uses: actions/upload-artifact@v4

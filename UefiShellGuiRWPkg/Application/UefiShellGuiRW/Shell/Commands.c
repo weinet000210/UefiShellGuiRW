@@ -20,16 +20,16 @@ STATIC CONST RW_COMMAND  mCommands[] = {
   { RwCmdIndexData,  "Index/Data",                NULL,       &gIconIndexData,  NULL      },
   { RwCmdCmos,       "CMOS",                      NULL,       &gIconCmos,       NULL      },
   { RwCmdMsr,        "CPU MSR",                   NULL,       &gIconMsr,        NULL      },
-  { RwCmdEc,         "Embedded Controller",       NULL,       &gIconEc,         "Phase 5" },
-  { RwCmdSuperIo,    "Super I/O",                 NULL,       &gIconSuperIo,    "Phase 5" },
-  { RwCmdSmbus,      "SMBus / SPD",               NULL,       &gIconSmbus,      "Phase 5" },
-  { RwCmdStorage,    "ATA / NVMe Identify",       NULL,       &gIconStorage,    "Phase 5" },
+  { RwCmdEc,         "Embedded Controller",       NULL,       &gIconEc,         NULL      },
+  { RwCmdSuperIo,    "Super I/O",                 NULL,       &gIconSuperIo,    NULL      },
+  { RwCmdSmbus,      "SMBus / SPD",               NULL,       &gIconSmbus,      NULL      },
+  { RwCmdStorage,    "ATA / NVMe Identify",       NULL,       &gIconStorage,    NULL      },
   { RwCmdUsb,        "USB Devices",               NULL,       &gIconUsb,        NULL      },
   { RwCmdAcpi,       "ACPI Tables",               NULL,       &gIconAcpi,       NULL      },
   { RwCmdSmbios,     "SMBIOS",                    NULL,       &gIconSmbios,     NULL      },
   { RwCmdPcieTree,   "PCIe Tree",                 NULL,       &gIconPcieTree,   NULL      },
-  { RwCmdEdid,       "Monitor EDID",              NULL,       &gIconEdid,       "Phase 5" },
-  { RwCmdComPort,    "COM Port Test",             NULL,       &gIconComPort,    "Phase 5" },
+  { RwCmdEdid,       "Monitor EDID",              NULL,       &gIconEdid,       NULL      },
+  { RwCmdComPort,    "COM Port Test",             NULL,       &gIconComPort,    NULL      },
   { RwCmdCascade,    "Cascade",                   NULL,       &gIconCascade,    NULL      },
   { RwCmdTileH,      "Tile Horizontally",         NULL,       &gIconTileH,      NULL      },
   { RwCmdTileV,      "Tile Vertically",           NULL,       &gIconTileV,      NULL      },
@@ -153,6 +153,24 @@ RwRunCommand (
             break;
           case RwCmdUsb:
             RwViewOpenUsb ();
+            break;
+          case RwCmdEc:
+            RwViewOpenEc ();
+            break;
+          case RwCmdSuperIo:
+            RwViewOpenSio ();
+            break;
+          case RwCmdSmbus:
+            RwViewOpenSmbus ();
+            break;
+          case RwCmdStorage:
+            RwViewOpenStorage ();
+            break;
+          case RwCmdEdid:
+            RwViewOpenEdid ();
+            break;
+          case RwCmdComPort:
+            RwViewOpenCom ();
             break;
           default:
             RwViewOpenPlaceholder (Id);

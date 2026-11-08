@@ -19,7 +19,7 @@ ReadEntry (
   IN RW_MSR_ENTRY  *Entry
   )
 {
-  Entry->Valid = (BOOLEAN)(mMsr.Guard && !EFI_ERROR (RwMsrRead (Entry->Index, &Entry->Value)));
+  Entry->Valid = (BOOLEAN)(mMsr.Guard && !EFI_ERROR (RwMsrReadOn (mMsr.CpuIndex, Entry->Index, &Entry->Value)));
   if (!Entry->Valid) {
     Entry->Value = 0;
   }
@@ -160,7 +160,7 @@ OnConfirm (
     return;
   }
 
-  Status = mMsr.Guard ? RwMsrWrite (mMsr.PendingIndex, mMsr.PendingValue) : EFI_UNSUPPORTED;
+  Status = mMsr.Guard ? RwMsrWriteOn (mMsr.CpuIndex, mMsr.PendingIndex, mMsr.PendingValue) : EFI_UNSUPPORTED;
   for (Row = 0; Row < mMsr.Count; Row++) {
     if (mMsr.Entries[Row].Index == mMsr.PendingIndex) {
       ReadEntry (&mMsr.Entries[Row]);
@@ -196,12 +196,13 @@ RwMsrViewWrite (
   AsciiSPrint (
     Text,
     sizeof (Text),
-    "Write %016lX to MSR %08X%a%a%a?\n\nA wrong value can hang or reset the machine.",
+    "Write %016lX to MSR %08X%a%a%a on CPU %d?\n\nA wrong value can hang or reset the machine.",
     Value,
     Index,
     (Name != NULL) ? " (" : "",
     (Name != NULL) ? Name : "",
-    (Name != NULL) ? ")" : ""
+    (Name != NULL) ? ")" : "",
+    mMsr.CpuIndex
     );
   RwDialogConfirm ("Write MSR", Text, RW_DIALOG_WARNING, OnConfirm, NULL);
 }
@@ -276,6 +277,11 @@ ListKey (
     return TRUE;
   }
 
+  if (((Key->ScanCode == SCAN_RIGHT) || (Key->ScanCode == SCAN_LEFT)) && ((Key->Modifiers & UEFI_GUI_KEY_MOD_CTRL) != 0) && (mMsr.CpuCount > 1)) {
+    RwMsrViewSetCpu ((Key->ScanCode == SCAN_RIGHT) ? (mMsr.CpuIndex + 1) % mMsr.CpuCount : (mMsr.CpuIndex + mMsr.CpuCount - 1) % mMsr.CpuCount);
+    return TRUE;
+  }
+
   return FALSE;
 }
 
@@ -293,6 +299,49 @@ OnBits (
   if ((Row < mMsr.Count) && mMsr.Entries[Row].Valid) {
     RwMsrViewWrite (mMsr.Entries[Row].Index, NewValue);
   }
+}
+
+STATIC
+VOID
+UpdateCpuLabel (
+  VOID
+  )
+{
+  CHAR8        Text[160];
+  RW_CPU_INFO  Info;
+
+  RwCpuGetInfo (mMsr.CpuIndex, &Info);
+  AsciiSPrint (
+    Text,
+    sizeof (Text),
+    "%a   CPU %d of %d (APIC %X%a)%a%a",
+    (mMsr.Brand[0] != '\0') ? mMsr.Brand : "CPU",
+    mMsr.CpuIndex,
+    mMsr.CpuCount,
+    Info.ApicId,
+    Info.IsBsp ? ", boot processor" : "",
+    (mMsr.CpuCount > 1) ? "   Ctrl+Left/Right: CPU" : "",
+    mMsr.Guard ? "" : "   MSR access unavailable"
+    );
+  lv_label_set_text (mMsr.Cpu, Text);
+}
+
+VOID
+RwMsrViewSetCpu (
+  IN UINTN  Cpu
+  )
+{
+  CHAR8  Text[64];
+
+  if ((mMsr.Window == NULL) || (Cpu >= mMsr.CpuCount)) {
+    return;
+  }
+
+  mMsr.CpuIndex = Cpu;
+  UpdateCpuLabel ();
+  RwMsrViewReadAll ();
+  AsciiSPrint (Text, sizeof (Text), "MSRs of CPU %d.", Cpu);
+  RwStatusSetText (Text);
 }
 
 STATIC
@@ -328,8 +377,6 @@ RwViewOpenMsr (
   CONST RW_MSR_KNOWN            *Known;
   UINTN                         KnownCount;
   UINTN                         Index;
-  CHAR8                         Brand[64];
-  CHAR8                         Text[128];
   CHAR8                         IndexText[12];
   CHAR8                         Value[20];
   CONST CHAR8                   *Cells[3];
@@ -354,15 +401,11 @@ RwViewOpenMsr (
   mMsr.Guard = (BOOLEAN)!EFI_ERROR (RwMsrGuardInstall ());
 
   Column = RwViewColumn (Window->Content, 0);
-  RwCpuBrand (Brand, sizeof (Brand));
-  AsciiSPrint (
-    Text,
-    sizeof (Text),
-    "%a   (boot processor)%a",
-    (Brand[0] != '\0') ? Brand : "CPU",
-    mMsr.Guard ? "" : "   MSR access unavailable"
-    );
-  mMsr.Cpu   = RwViewLabel (Column, Text);
+  RwCpuBrand (mMsr.Brand, sizeof (mMsr.Brand));
+  mMsr.CpuCount = RwCpuCount ();
+  mMsr.CpuIndex = RwCpuBsp ();
+  mMsr.Cpu   = RwViewLabel (Column, "");
+  UpdateCpuLabel ();
   mMsr.Table = RwTableCreate (RwViewPane (Column, 1), Window, Columns, ARRAY_SIZE (Columns), TRUE);
   RwTableSetCallbacks (mMsr.Table, OnSelect, OnActivate, NULL);
   RwTableList (mMsr.Table)->ExtraKey = ListKey;
@@ -386,7 +429,7 @@ RwViewOpenMsr (
 
   lv_obj_update_layout (RwBitFieldWidget (mMsr.Bits)->Obj);
   BitsW = lv_obj_get_width (RwBitFieldWidget (mMsr.Bits)->Obj);
-  RwMdiFitContent (Window, MAX (BitsW, 84 + 236 + 160), 520);
+  RwMdiFitContent (Window, MAX (BitsW, 84 + 236 + 200), 520);
   RwFocusSet (&RwTableList (mMsr.Table)->Base);
   return Window;
 }
