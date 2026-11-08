@@ -88,6 +88,7 @@ STATIC CONST TEST_MODULE  mModules[] = {
   { "Smbus",  TestSmbus  },
   { "Storage", TestStorage },
   { "Edid",   TestEdid   },
+  { "Tools",  TestTools  },
 };
 
 EFI_STATUS

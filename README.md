@@ -30,7 +30,7 @@ and VS2022 and its tests pass in CI (QEMU + OVMF).
 | 3 | Raw spaces: PCI list + config space, Memory (with memory map), I/O, Index/Data, CMOS (with RTC decode), CPU MSR | Done |
 | 4 | Decoders: PCIe tree with full device decode (capabilities, extended capabilities, link), ACPI tables + ASL, SMBIOS, USB tree + descriptors | Done |
 | 5 | Devices: Super I/O, EC, COM port; SMBus/SPD, ATA/NVMe identify, EDID, MSR per CPU | Done |
-| 6 | Tools: screenshot, dump all, register snapshots and compare, write log, file browser/editor | Planned |
+| 6 | Tools: screenshot, dump all, register snapshots and compare, write log, file browser/editor | Done |
 | 7 | Real hardware validation, performance, v1.0 | Planned |
 
 Write policy: ordinary registers are written when you finish typing the

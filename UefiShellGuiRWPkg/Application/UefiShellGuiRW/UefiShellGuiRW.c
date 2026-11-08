@@ -91,7 +91,7 @@ RwKeyHandler (
   if (Ctrl && (Key->ScanCode == SCAN_F4)) {
     Window = RwMdiGetActive ();
     if (Window != NULL) {
-      RwMdiClose (Window);
+      RwMdiRequestClose (Window);
     }
 
     return TRUE;
@@ -99,6 +99,11 @@ RwKeyHandler (
 
   if (Ctrl && (Key->UnicodeChar == CHAR_TAB)) {
     RwMdiActivateNext ();
+    return TRUE;
+  }
+
+  if (RwKeyIsCtrl (Key, L'S')) {
+    RwRunCommand (RwCmdSaveWindow);
     return TRUE;
   }
 

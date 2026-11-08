@@ -56,5 +56,6 @@ VOID TestUart   (VOID);
 VOID TestSmbus  (VOID);
 VOID TestStorage (VOID);
 VOID TestEdid   (VOID);
+VOID TestTools  (VOID);
 
 #endif

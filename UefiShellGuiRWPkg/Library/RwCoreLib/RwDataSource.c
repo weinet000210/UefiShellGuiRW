@@ -75,6 +75,10 @@ RwDsWrite (
   IN UINT64          Value
   )
 {
+  EFI_STATUS  Status;
+  UINT64      Old;
+  BOOLEAN     OldValid;
+
   if (Source == NULL) {
     return EFI_INVALID_PARAMETER;
   }
@@ -87,7 +91,18 @@ RwDsWrite (
     return EFI_INVALID_PARAMETER;
   }
 
-  return Source->Write (Source, Address, Width, Value);
+  //
+  // Write log: read the old value first unless reading has side effects.
+  //
+  OldValid = FALSE;
+  Old      = 0;
+  if (!Source->SideEffects && (Source->Read != NULL)) {
+    OldValid = (BOOLEAN)!EFI_ERROR (Source->Read (Source, Address, Width, &Old));
+  }
+
+  Status = Source->Write (Source, Address, Width, Value);
+  RwWlogAdd (Source->Name, Address, Width, OldValid, Old, Value, Status);
+  return Status;
 }
 
 BOOLEAN

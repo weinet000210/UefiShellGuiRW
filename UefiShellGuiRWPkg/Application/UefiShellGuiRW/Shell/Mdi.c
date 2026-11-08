@@ -312,7 +312,7 @@ OnClose (
   lv_event_t  *Event
   )
 {
-  RwMdiClose ((RW_MDI_WINDOW *)lv_event_get_user_data (Event));
+  RwMdiRequestClose ((RW_MDI_WINDOW *)lv_event_get_user_data (Event));
 }
 
 VOID
@@ -885,5 +885,29 @@ RwMdiTile (
 
     SaveRestore (Window);
     Index++;
+  }
+}
+
+VOID
+RwMdiRequestClose (
+  IN RW_MDI_WINDOW  *Window
+  )
+{
+  if ((Window->OnQueryClose != NULL) && !Window->OnQueryClose (Window)) {
+    return;
+  }
+
+  RwMdiClose (Window);
+}
+
+VOID
+RwMdiSetTitle (
+  IN RW_MDI_WINDOW  *Window,
+  IN CONST CHAR8    *Title
+  )
+{
+  lv_label_set_text (Window->Title, Title);
+  if (Window == RwMdiGetActive ()) {
+    RwStatusSetWindow (Title);
   }
 }

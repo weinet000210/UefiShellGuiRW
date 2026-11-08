@@ -51,6 +51,7 @@ application share it.
 | `RwSmbus.h` | `RwSmbus.c`, `RwSpd.c` | Intel ICH/PCH and AMD SB/FCH SMBus host (PIIX4 layout), enable, scan, byte read/write; SPD read with DDR4 (36h/37h) and DDR5 (MR11) paging, DDR3/4/5 decode, JEDEC IDs, CRC |
 | `RwStorage.h` | `RwStorage.c` | ATA / ATAPI IDENTIFY (ATA pass-thru), NVMe Identify Controller / Namespace (NVMe pass-thru), decoders |
 | `RwEdid.h` | `RwEdid.c` | EDID from EDID Active / Discovered, else the QEMU stdvga EDID window; EDID 1.x decode |
+| `RwTools.h` | `RwWriteLog.c`, `RwDump.c`, `RwToolsFormat.c` | write log (RwDsWrite, RwMsrWriteOn and RwSmbusEnable record time, space, address, width, old / new value and status; newest 1000 in memory), Dump All text, BMP / hex dump / page snapshot formats. No file access: the application saves the buffers. |
 
 ## Tests
 

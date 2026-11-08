@@ -388,10 +388,21 @@ RwMsrWriteOn (
   )
 {
   MSR_AP_ARG  Arg;
+  MSR_AP_ARG  Read;
+  BOOLEAN     OldValid;
+  EFI_STATUS  Status;
+  CHAR8       Space[24];
+
+  ZeroMem (&Read, sizeof (Read));
+  Read.Index = Index;
+  OldValid   = (BOOLEAN)!EFI_ERROR (RunOn (Cpu, &Read));
 
   ZeroMem (&Arg, sizeof (Arg));
   Arg.Index = Index;
   Arg.Write = TRUE;
   Arg.Value = Value;
-  return RunOn (Cpu, &Arg);
+  Status    = RunOn (Cpu, &Arg);
+  AsciiSPrint (Space, sizeof (Space), "MSR CPU %d", Cpu);
+  RwWlogAdd (Space, Index, 8, OldValid, Read.Value, Value, Status);
+  return Status;
 }

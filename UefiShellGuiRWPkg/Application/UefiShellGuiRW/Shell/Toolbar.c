@@ -11,7 +11,7 @@
 #define TB_BUTTON_SIZE  26
 
 STATIC CONST RW_COMMAND_ID  mToolbar[] = {
-  RwCmdRefresh, RwCmdScreenshot, RwCmdNone,
+  RwCmdRefresh, RwCmdScreenshot, RwCmdDumpAll, RwCmdWriteLog, RwCmdFiles, RwCmdNone,
   RwCmdPci,     RwCmdMemory,     RwCmdIo,     RwCmdIndexData, RwCmdCmos, RwCmdMsr, RwCmdNone,
   RwCmdEc,      RwCmdSuperIo,    RwCmdSmbus,  RwCmdStorage,   RwCmdUsb,  RwCmdNone,
   RwCmdAcpi,    RwCmdSmbios,     RwCmdPcieTree, RwCmdEdid,    RwCmdComPort, RwCmdNone,

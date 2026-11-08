@@ -30,6 +30,7 @@
   TestSmbus.c
   TestStorage.c
   TestEdid.c
+  TestTools.c
 
 [Packages]
   MdePkg/MdePkg.dec

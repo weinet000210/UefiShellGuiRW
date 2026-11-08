@@ -239,6 +239,23 @@ def ic_dump(d):
     d.rectangle(P(9, 5, 12, 9), fill=(20, 140, 40))
 
 
+def ic_wlog(d):
+    page(d)
+    for i, y in enumerate((7, 10, 13, 16)):
+        d.rectangle(P(6, y, 7.5, y + 1.2), fill=(200, 30, 30))
+        d.rectangle(P(9, y, 15 - (i % 2) * 2, y + 1.2), fill=(60, 60, 60))
+    d.line(P(12, 2, 19, 9), fill=(30, 60, 160), width=int(1.8 * SS))
+    d.polygon([tuple(P(10.5, 0.8)), tuple(P(13.2, 1.5)), tuple(P(11.2, 3.5))], fill=(30, 60, 160))
+
+
+def ic_files(d):
+    d.polygon([tuple(P(1, 4)), tuple(P(7, 4)), tuple(P(9, 6)), tuple(P(19, 6)), tuple(P(19, 17)), tuple(P(1, 17))],
+              fill=(230, 180, 60), outline=(140, 100, 20))
+    d.polygon([tuple(P(1, 8)), tuple(P(19, 8)), tuple(P(19, 17)), tuple(P(1, 17))], fill=(250, 210, 90),
+              outline=(140, 100, 20))
+    d.rectangle(P(5, 10, 15, 11.2), fill=(140, 100, 20))
+
+
 def ic_exit(d):
     d.rectangle(P(3, 1, 13, 19), fill=(150, 90, 40), outline=(80, 40, 10), width=SS)
     d.ellipse(P(10, 9, 12, 11), fill=(240, 200, 60))
@@ -251,6 +268,7 @@ ICONS = [
     ("Smbus", ic_smbus), ("Storage", ic_ata), ("Usb", ic_usb), ("Acpi", ic_acpi),
     ("Smbios", ic_smbios), ("Edid", ic_edid), ("ComPort", ic_com), ("PcieTree", ic_tree),
     ("Refresh", ic_refresh), ("Screenshot", ic_shot), ("DumpAll", ic_dump),
+    ("WriteLog", ic_wlog), ("Files", ic_files),
     ("Cascade", ic_cascade), ("TileH", ic_tileh), ("TileV", ic_tilev),
     ("About", ic_about), ("Exit", ic_exit),
 ]

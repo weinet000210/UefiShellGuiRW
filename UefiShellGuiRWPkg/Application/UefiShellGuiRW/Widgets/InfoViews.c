@@ -1182,3 +1182,109 @@ RwTextViewLineCount (
 {
   return View->LineCount;
 }
+
+//
+// ---- Text of a widget (File > Save Window) -------------------------------------
+//
+
+CONST RW_INFO *
+RwTreeViewGetInfo (
+  IN RW_TREEVIEW  *Tree
+  )
+{
+  return &Tree->Info;
+}
+
+CONST CHAR8 *
+RwTextViewGetText (
+  IN RW_TEXTVIEW  *View
+  )
+{
+  return (View->Text != NULL) ? View->Text : "";
+}
+
+STATIC
+VOID
+TableToText (
+  IN     RW_TABLE  *Table,
+  IN OUT RW_STR    *Out,
+  IN     BOOLEAN   Crlf
+  )
+{
+  UINTN        Widths[RW_VLIST_MAX_COLUMNS];
+  UINTN        Columns;
+  UINTN        Column;
+  UINTN        Row;
+  CONST CHAR8  *Cell;
+
+  Columns = MAX (Table->List->ColumnCount, 1);
+  for (Column = 0; Column < Columns; Column++) {
+    Widths[Column] = (Table->List->ColumnCount > 0) ? AsciiStrLen (Table->List->Columns[Column].Title) : 0;
+    for (Row = 0; Row < Table->Count; Row++) {
+      Widths[Column] = MAX (Widths[Column], AsciiStrLen (Table->Rows[Row].Cells[Column]));
+    }
+  }
+
+  for (Row = 0; Row <= Table->Count; Row++) {
+    if ((Row == 0) && (Table->List->ColumnCount == 0)) {
+      continue;
+    }
+
+    for (Column = 0; Column < Columns; Column++) {
+      Cell = (Row == 0) ? Table->List->Columns[Column].Title : Table->Rows[Row - 1].Cells[Column];
+      if (Column + 1 < Columns) {
+        RwStrAppendF (Out, "%-*a  ", Widths[Column], Cell);
+      } else {
+        RwStrAppend (Out, Cell);
+      }
+    }
+
+    RwStrAppend (Out, Crlf ? "\r\n" : "\n");
+  }
+}
+
+BOOLEAN
+RwWidgetToText (
+  IN     RW_WIDGET  *Widget,
+  IN OUT RW_STR     *Out,
+  IN     BOOLEAN    Crlf
+  )
+{
+  RW_VLIST     *List;
+  CONST CHAR8  *Text;
+  CONST CHAR8  *P;
+
+  if ((Widget == NULL) || (Widget->Kind == NULL)) {
+    return FALSE;
+  }
+
+  List = (RW_VLIST *)Widget;
+  if (AsciiStrCmp (Widget->Kind, "TreeView") == 0) {
+    RwInfoToText (&((RW_TREEVIEW *)List->Owner)->Info, Out, Crlf);
+  } else if (AsciiStrCmp (Widget->Kind, "PropTable") == 0) {
+    RwInfoToText (&((RW_PROPTABLE *)List->Owner)->Info, Out, Crlf);
+  } else if (AsciiStrCmp (Widget->Kind, "Table") == 0) {
+    TableToText ((RW_TABLE *)List->Owner, Out, Crlf);
+  } else if (AsciiStrCmp (Widget->Kind, "TextView") == 0) {
+    Text = RwTextViewGetText ((RW_TEXTVIEW *)List->Owner);
+    for (P = Text; *P != '\0'; P++) {
+      if (*P == '\r') {
+        continue;
+      }
+
+      if ((*P == '\n') && Crlf) {
+        RwStrAppendChar (Out, '\r');
+      }
+
+      RwStrAppendChar (Out, *P);
+    }
+
+    if ((P > Text) && (P[-1] != '\n')) {
+      RwStrAppend (Out, Crlf ? "\r\n" : "\n");
+    }
+  } else {
+    return FALSE;
+  }
+
+  return TRUE;
+}

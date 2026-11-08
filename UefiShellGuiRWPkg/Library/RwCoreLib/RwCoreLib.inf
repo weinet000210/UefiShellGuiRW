@@ -33,6 +33,9 @@
   RwSpd.c
   RwStorage.c
   RwEdid.c
+  RwWriteLog.c
+  RwToolsFormat.c
+  RwDump.c
 
 [Packages]
   MdePkg/MdePkg.dec

@@ -26,7 +26,10 @@ typedef struct {
   BOOLEAN               WindowList;
 } RW_MENU;
 
-STATIC CONST RW_COMMAND_ID  mFileEntries[]     = { RwCmdRefresh, RwCmdScreenshot, RwCmdDumpAll, RwCmdNone, RwCmdExit };
+STATIC CONST RW_COMMAND_ID  mFileEntries[]     = {
+  RwCmdRefresh,  RwCmdSaveWindow, RwCmdScreenshot, RwCmdDumpAll, RwCmdNone,
+  RwCmdWriteLog, RwCmdFiles,      RwCmdNone,       RwCmdExit
+};
 STATIC CONST RW_COMMAND_ID  mAccessEntries[]   = {
   RwCmdPci,  RwCmdMemory, RwCmdIo,      RwCmdIndexData, RwCmdNone,
   RwCmdCmos, RwCmdMsr,    RwCmdNone,

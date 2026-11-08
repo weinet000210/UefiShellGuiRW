@@ -105,6 +105,12 @@ RwFocusSet (
   IN RW_WIDGET  *Widget
   );
 
+/** TRUE when the widget or one of its parents is hidden. **/
+BOOLEAN
+RwWidgetIsHidden (
+  IN RW_WIDGET  *Widget
+  );
+
 RW_WIDGET *
 RwFocusGet (
   IN RW_MDI_WINDOW  *Window
@@ -240,7 +246,7 @@ RwDialogGetText (
 //
 // Keys: arrows, Home/End (row), Ctrl+Home/Ctrl+End (page), PgUp/PgDn (page),
 // Ctrl+B / Ctrl+W / Ctrl+D byte / word / dword, Ctrl+G go to address,
-// Ctrl+R auto refresh on/off.
+// Ctrl+R auto refresh on/off, Ctrl+N snapshot on/off, Ctrl+L load snapshot.
 //
 typedef struct _RW_HEXGRID RW_HEXGRID;
 
@@ -377,6 +383,56 @@ RwHexGridGetCellText (
 
 BOOLEAN
 RwHexGridIsEditing (
+  IN RW_HEXGRID  *Grid
+  );
+
+RW_DATA_SOURCE *
+RwHexGridGetSource (
+  IN RW_HEXGRID  *Grid
+  );
+
+/** The page as last read: RW_HEXGRID_PAGE bytes and validity flags. **/
+VOID
+RwHexGridGetData (
+  IN  RW_HEXGRID  *Grid,
+  OUT UINT8       *Data,
+  OUT BOOLEAN     *Valid
+  );
+
+/**
+  Compare the page at Page against Data from now on: bytes that differ are
+  red until the snapshot is cleared (other pages compare as before).
+**/
+VOID
+RwHexGridSetSnapshot (
+  IN RW_HEXGRID     *Grid,
+  IN UINT64         Page,
+  IN CONST UINT8    *Data,
+  IN CONST BOOLEAN  *Valid
+  );
+
+VOID
+RwHexGridClearSnapshot (
+  IN RW_HEXGRID  *Grid
+  );
+
+BOOLEAN
+RwHexGridHasSnapshot (
+  IN  RW_HEXGRID  *Grid,
+  OUT UINT64      *Page  OPTIONAL
+  );
+
+/**
+  Ctrl+N / Ctrl+L of the grid (Tools/Tools.c): take or clear a snapshot of
+  the page, load one from a SNAPnnnn.BIN file.
+**/
+VOID
+RwToolSnapshotToggle (
+  IN RW_HEXGRID  *Grid
+  );
+
+VOID
+RwToolSnapshotLoad (
   IN RW_HEXGRID  *Grid
   );
 
@@ -848,6 +904,27 @@ RwTextViewSetText (
 UINTN
 RwTextViewLineCount (
   IN RW_TEXTVIEW  *View
+  );
+
+CONST CHAR8 *
+RwTextViewGetText (
+  IN RW_TEXTVIEW  *View
+  );
+
+CONST RW_INFO *
+RwTreeViewGetInfo (
+  IN RW_TREEVIEW  *Tree
+  );
+
+/**
+  Append the content of a tree view, property table, table or text view as
+  plain text (File > Save Window). FALSE for other widgets.
+**/
+BOOLEAN
+RwWidgetToText (
+  IN     RW_WIDGET  *Widget,
+  IN OUT RW_STR     *Out,
+  IN     BOOLEAN    Crlf
   );
 
 #endif

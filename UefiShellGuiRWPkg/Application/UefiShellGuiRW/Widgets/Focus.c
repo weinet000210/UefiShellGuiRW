@@ -157,9 +157,8 @@ RwFocusGet (
   return Window->Focus[Window->FocusIndex];
 }
 
-STATIC
 BOOLEAN
-WidgetHidden (
+RwWidgetIsHidden (
   IN RW_WIDGET  *Widget
   )
 {
@@ -206,7 +205,7 @@ RwFocusHandleKey (
         Next = (Next + 1) % Window->FocusCount;
       }
 
-      if (!WidgetHidden (Window->Focus[Next])) {
+      if (!RwWidgetIsHidden (Window->Focus[Next])) {
         RwFocusSet (Window->Focus[Next]);
         break;
       }

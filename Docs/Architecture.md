@@ -11,13 +11,16 @@
 |           Phase 3: PCI, Memory, I/O, Index/Data, CMOS, MSR   |
 |           Phase 4: PCIe Tree, ACPI, SMBIOS, USB              |
 |           Phase 5: EC, SIO, COM, SMBus/SPD, Storage, EDID    |
+|  Tools/   (Phase 6) files, screenshot, dump, save window,    |
+|           snapshots, Write Log, File Browser, editors        |
 |  Widgets/ (Phase 2) HexGrid, BitFieldView, TreeView,         |
 |           PropertyTable, dialogs                             |
 +------------------------------+-------------------------------+
 | RwCoreLib (Phase 1, no LVGL) | LVGLUefiGuiPkg (submodule)    |
 |  PCI, Mem, IO, MSR, CMOS,    |  UefiGuiLib, LVGL v9.6,       |
 |  EC, SIO, SMBIOS, ACPI, AML, |  GOP display, keyboard,       |
-|  USB, UART                   |  mouse, event loop            |
+|  USB, UART, SMBus, storage,  |  mouse, event loop            |
+|  EDID, write log, dump       |                               |
 +------------------------------+-------------------------------+
 | UEFI Boot Services and protocols                             |
 +--------------------------------------------------------------+
