@@ -43,7 +43,7 @@ Rules:
 A module opens one window; running its command again brings that window to
 the front (as RW-Everything does).
 
-## Data source (Phase 2)
+## Data source (Phase 1, used by the Phase 2 widgets)
 
 Hex views are one widget over an interface:
 
@@ -67,3 +67,4 @@ switching, change highlighting and auto refresh for all of them.
 the mouse and keyboard reach (commands, toolbar click events, the key
 handler) and checks window geometry and state. CI runs it in QEMU for DEBUG
 and RELEASE and keeps a screenshot.
+Widget details: [Widgets.md](Widgets.md).

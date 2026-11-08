@@ -26,8 +26,8 @@
 #include <Library/UefiGuiRuntimeLib.h>
 
 #define RW_APP_NAME     "UefiShellGuiRW"
-#define RW_APP_VERSION  "0.0.1"
-#define RW_APP_PHASE    "Phase 0"
+#define RW_APP_VERSION  "0.0.2"
+#define RW_APP_PHASE    "Phase 2"
 
 //
 // Colors of the classic Windows look RW-Everything uses.
@@ -228,6 +228,16 @@ VOID
   IN RW_MDI_WINDOW  *Window
   );
 
+typedef
+VOID
+(*RW_MDI_CALLBACK)(
+  IN RW_MDI_WINDOW  *Window
+  );
+
+#define RW_MDI_MAX_FOCUS  8
+
+struct _RW_WIDGET;
+
 struct _RW_MDI_WINDOW {
   lv_obj_t                 *Obj;        ///< Frame.
   lv_obj_t                 *Caption;
@@ -239,7 +249,11 @@ struct _RW_MDI_WINDOW {
   BOOLEAN                  Minimized;
   lv_area_t                Restore;     ///< Normal geometry (desktop coordinates).
   RW_MDI_CLOSE_CALLBACK    OnClose;
+  RW_MDI_CALLBACK          OnRefresh;   ///< File > Refresh (F5) while active, or NULL.
   VOID                     *Context;
+  struct _RW_WIDGET        *Focus[RW_MDI_MAX_FOCUS];   ///< focus chain (Widgets/Focus.c)
+  UINTN                    FocusCount;
+  UINTN                    FocusIndex;
   RW_MDI_WINDOW            *Next;
 };
 
@@ -333,6 +347,12 @@ RwViewOpenAbout (
   VOID
   );
 
+/** Widget test window (self test only): hex grid, bit view, tree, tables. **/
+RW_MDI_WINDOW *
+RwViewOpenWidgetTest (
+  VOID
+  );
+
 //
 // UefiShellGuiRW.c
 //
@@ -356,10 +376,39 @@ RwSerialLog (
   );
 
 //
-// SelfTest.c
+// SelfTest.c, SelfTestWidgets.c
 //
 UINTN
 RwSelfTestRun (
+  VOID
+  );
+
+VOID
+RwTestCheck (
+  IN CONST CHAR8  *Name,
+  IN BOOLEAN      Passed
+  );
+
+VOID
+RwTestPump (
+  IN UINT64  Ms
+  );
+
+/** Send one key through RwKeyHandler, as the keyboard would. **/
+VOID
+RwTestKey (
+  IN UINT16  ScanCode,
+  IN CHAR16  Char,
+  IN UINT32  Modifiers
+  );
+
+VOID
+RwTestType (
+  IN CONST CHAR8  *Text
+  );
+
+VOID
+RwSelfTestWidgets (
   VOID
   );
 

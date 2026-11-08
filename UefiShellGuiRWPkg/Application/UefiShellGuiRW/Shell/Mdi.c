@@ -8,7 +8,7 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "../UefiShellGuiRW.h"
+#include "../Widgets/RwWidgets.h"
 
 #define MDI_MIN_WIDTH       160
 #define MDI_MIN_HEIGHT      80
@@ -496,6 +496,7 @@ RwMdiClose (
     }
   }
 
+  RwFocusWindowClosed (Window);
   if (Window->OnClose != NULL) {
     Window->OnClose (Window);
   }
