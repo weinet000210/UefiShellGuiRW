@@ -97,8 +97,8 @@ TestSpdImages (
   Spd.Data[3]   = 0x02;
   Spd.Data[4]   = 0x04;
   Spd.Data[6]   = 0x20;
-  Spd.Data[20]  = (UINT8)416;
-  Spd.Data[21]  = (UINT8)(416 >> 8);
+  Spd.Data[20]  = 0xA0;                 // 416 ps = 01A0h
+  Spd.Data[21]  = 0x01;
   Spd.Data[234] = 0x08;
   Spd.Data[235] = 0x22;
   Spd.Data[512] = 0x80;
