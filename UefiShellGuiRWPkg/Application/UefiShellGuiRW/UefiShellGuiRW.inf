@@ -48,7 +48,12 @@
   Views/IndexDataView.c
   Views/CmosView.c
   Views/MsrView.c
+  Views/PcieTreeView.c
+  Views/AcpiView.c
+  Views/SmbiosView.c
+  Views/UsbView.c
   SelfTestViews.c
+  SelfTestDecoders.c
 
 [Packages]
   MdePkg/MdePkg.dec

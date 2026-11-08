@@ -24,10 +24,10 @@ STATIC CONST RW_COMMAND  mCommands[] = {
   { RwCmdSuperIo,    "Super I/O",                 NULL,       &gIconSuperIo,    "Phase 5" },
   { RwCmdSmbus,      "SMBus / SPD",               NULL,       &gIconSmbus,      "Phase 5" },
   { RwCmdStorage,    "ATA / NVMe Identify",       NULL,       &gIconStorage,    "Phase 5" },
-  { RwCmdUsb,        "USB Devices",               NULL,       &gIconUsb,        "Phase 4" },
-  { RwCmdAcpi,       "ACPI Tables",               NULL,       &gIconAcpi,       "Phase 4" },
-  { RwCmdSmbios,     "SMBIOS",                    NULL,       &gIconSmbios,     "Phase 4" },
-  { RwCmdPcieTree,   "PCIe Tree",                 NULL,       &gIconPcieTree,   "Phase 4" },
+  { RwCmdUsb,        "USB Devices",               NULL,       &gIconUsb,        NULL      },
+  { RwCmdAcpi,       "ACPI Tables",               NULL,       &gIconAcpi,       NULL      },
+  { RwCmdSmbios,     "SMBIOS",                    NULL,       &gIconSmbios,     NULL      },
+  { RwCmdPcieTree,   "PCIe Tree",                 NULL,       &gIconPcieTree,   NULL      },
   { RwCmdEdid,       "Monitor EDID",              NULL,       &gIconEdid,       "Phase 5" },
   { RwCmdComPort,    "COM Port Test",             NULL,       &gIconComPort,    "Phase 5" },
   { RwCmdCascade,    "Cascade",                   NULL,       &gIconCascade,    NULL      },
@@ -141,6 +141,18 @@ RwRunCommand (
             break;
           case RwCmdMsr:
             RwViewOpenMsr ();
+            break;
+          case RwCmdPcieTree:
+            RwViewOpenPcieTree ();
+            break;
+          case RwCmdAcpi:
+            RwViewOpenAcpi ();
+            break;
+          case RwCmdSmbios:
+            RwViewOpenSmbios ();
+            break;
+          case RwCmdUsb:
+            RwViewOpenUsb ();
             break;
           default:
             RwViewOpenPlaceholder (Id);

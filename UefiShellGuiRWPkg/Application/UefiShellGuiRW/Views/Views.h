@@ -98,6 +98,121 @@ RwPciViewGet (
   VOID
   );
 
+/**
+  Open (or bring up) the PCI Devices window on the function at
+  Segment:Bus:Dev.Func with the grid cursor on config Offset.
+  FALSE when the function is not in the list.
+**/
+BOOLEAN
+RwPciViewShow (
+  IN UINT32  Segment,
+  IN UINT8   Bus,
+  IN UINT8   Dev,
+  IN UINT8   Func,
+  IN UINT32  Offset
+  );
+
+//
+// ---- PCIe tree + device decode (Phase 4) -----------------------------------
+//
+typedef struct {
+  RW_MDI_WINDOW    *Window;
+  RW_TREEVIEW      *Tree;
+  RW_PROPTABLE     *Decode;
+  lv_obj_t         *Heading;
+  RW_PCI_LIST      List;
+  INT32            Current;          ///< device index shown in Decode, -1 = none
+} RW_PCIE_TREE_VIEW;
+
+RW_MDI_WINDOW *
+RwViewOpenPcieTree (
+  VOID
+  );
+
+RW_PCIE_TREE_VIEW *
+RwPcieTreeViewGet (
+  VOID
+  );
+
+//
+// ---- ACPI tables (Phase 4) -------------------------------------------------
+//
+typedef struct {
+  RW_MDI_WINDOW     *Window;
+  RW_TABLE          *Tables;
+  lv_obj_t          *Heading;
+  lv_obj_t          *DecodePane;
+  lv_obj_t          *AslPane;
+  RW_PROPTABLE      *Decode;
+  RW_TEXTVIEW       *Asl;
+  RW_ACPI_TABLES    List;
+  RW_AML_CTX        Aml;
+  INT32             Current;         ///< table index, -1 = none
+  BOOLEAN           ShowAsl;         ///< AML tables: ASL (TRUE) or header + hex (FALSE)
+} RW_ACPI_VIEW;
+
+RW_MDI_WINDOW *
+RwViewOpenAcpi (
+  VOID
+  );
+
+RW_ACPI_VIEW *
+RwAcpiViewGet (
+  VOID
+  );
+
+//
+// ---- SMBIOS (Phase 4) ------------------------------------------------------
+//
+typedef struct {
+  RW_MDI_WINDOW      *Window;
+  RW_TABLE           *Structs;
+  RW_PROPTABLE       *Decode;
+  lv_obj_t           *Heading;
+  RW_SMBIOS_TABLE    Table;
+  BOOLEAN            Loaded;
+  INT32              Current;
+} RW_SMBIOS_VIEW;
+
+RW_MDI_WINDOW *
+RwViewOpenSmbios (
+  VOID
+  );
+
+RW_SMBIOS_VIEW *
+RwSmbiosViewGet (
+  VOID
+  );
+
+//
+// ---- USB (Phase 4) ---------------------------------------------------------
+//
+typedef struct {
+  RW_MDI_WINDOW     *Window;
+  RW_TREEVIEW       *Tree;
+  RW_PROPTABLE      *Decode;
+  lv_obj_t          *Heading;
+  RW_USB_SCAN       Scan;
+  RW_USB_HOTPLUG    Hotplug;
+  INT32             CurrentTag;      ///< tag shown in Decode, -1 = none
+} RW_USB_VIEW;
+
+RW_MDI_WINDOW *
+RwViewOpenUsb (
+  VOID
+  );
+
+RW_USB_VIEW *
+RwUsbViewGet (
+  VOID
+  );
+
+/** Rescan (F5): keeps hot-plug marks between scans. **/
+VOID
+RwUsbViewRescan (
+  VOID
+  );
+
 //
 // ---- Memory ----------------------------------------------------------------
 //

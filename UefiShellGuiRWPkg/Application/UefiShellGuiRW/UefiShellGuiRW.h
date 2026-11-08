@@ -26,8 +26,8 @@
 #include <Library/UefiGuiRuntimeLib.h>
 
 #define RW_APP_NAME     "UefiShellGuiRW"
-#define RW_APP_VERSION  "0.0.3"
-#define RW_APP_PHASE    "Phase 3"
+#define RW_APP_VERSION  "0.0.4"
+#define RW_APP_PHASE    "Phase 4"
 
 //
 // Colors of the classic Windows look RW-Everything uses.
@@ -423,6 +423,11 @@ RwSelfTestWidgets (
 
 VOID
 RwSelfTestViews (
+  VOID
+  );
+
+VOID
+RwSelfTestDecoders (
   VOID
   );
 
