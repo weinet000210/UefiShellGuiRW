@@ -9,6 +9,7 @@
 |           status bar, command table, key handling            |
 |  Views/   content of each child window (one file per module) |
 |           Phase 3: PCI, Memory, I/O, Index/Data, CMOS, MSR   |
+|           Phase 4: PCIe Tree, ACPI, SMBIOS, USB              |
 |  Widgets/ (Phase 2) HexGrid, BitFieldView, TreeView,         |
 |           PropertyTable, dialogs                             |
 +------------------------------+-------------------------------+

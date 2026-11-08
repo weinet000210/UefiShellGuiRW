@@ -2269,7 +2269,7 @@ Disassemble (
 
   ResetParser (Ctx, Table);
   EmitLine (Ctx, RwEmDim, "/*");
-  EmitFmt (Ctx, 0, RwEmDim, " * uefirrw AML disassembly (ASL 1.0 syntax), %d bytes of AML", Length - 36);
+  EmitFmt (Ctx, 0, RwEmDim, " * UefiShellGuiRW AML disassembly (ASL 1.0 syntax), %d bytes of AML", Length - 36);
   EmitLine (Ctx, RwEmDim, " * Method argument counts come from every DSDT/SSDT on this system.");
   EmitLine (Ctx, RwEmDim, " */");
   EmitFmt (

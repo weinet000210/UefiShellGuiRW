@@ -148,6 +148,51 @@ RwViewOpenPci (
   return Window;
 }
 
+BOOLEAN
+RwPciViewShow (
+  IN UINT32  Segment,
+  IN UINT8   Bus,
+  IN UINT8   Dev,
+  IN UINT8   Func,
+  IN UINT32  Offset
+  )
+{
+  UINTN          Index;
+  RW_PCI_DEVICE  *D;
+
+  if (mPci.Window == NULL) {
+    if (RwViewOpenPci () == NULL) {
+      return FALSE;
+    }
+  } else {
+    if (mPci.Window->Minimized) {
+      RwMdiSetMinimized (mPci.Window, FALSE);
+    }
+
+    RwMdiActivate (mPci.Window);
+  }
+
+  for (Index = 0; Index < mPci.List.DeviceCount; Index++) {
+    D = &mPci.List.Devices[Index];
+    if ((D->Segment == Segment) && (D->Bus == Bus) && (D->Dev == Dev) && (D->Func == Func)) {
+      RwVListSelect (RwTableList (mPci.Devices), Index);
+      RwVListScrollTo (RwTableList (mPci.Devices), Index);
+      if (mPci.Current != Index) {
+        ShowDevice (Index);
+      }
+
+      if (Offset <= mPci.Source.Limit) {
+        RwHexGridGoTo (mPci.Pane.Grid, Offset);
+      }
+
+      RwFocusSet (RwHexGridWidget (mPci.Pane.Grid));
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
 RW_PCI_VIEW *
 RwPciViewGet (
   VOID

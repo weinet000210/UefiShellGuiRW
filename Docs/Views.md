@@ -22,7 +22,26 @@ bar shows the cursor address and value.
 | CMOS | `Views/CmosView.c` | CMOS RAM 00h-FFh / RTC decode | 00h-7Fh through 70h/71h, 80h-FFh through 72h/73h, byte access. The decode shows time, date, day, alarm, registers A, B, D and the century byte; register C is not read (reading clears it). |
 | CPU MSR | `Views/MsrView.c` | Known MSRs of the boot processor | `Enter` writes a new value, `Ins` adds any MSR by index, the 64-bit bit view toggles bits. Every MSR write asks first. A #GP guard shows unsupported MSRs as `#GP` instead of hanging. |
 
+## Phase 4
+
+Decoder windows: a list or tree on the left, the decode of the selected
+item on the right (a property table: field, offset, value; sections are
+shaded). Nothing is written.
+
+| Window | File | Left / right | Notes |
+|---|---|---|---|
+| PCIe Tree | `Views/PcieTreeView.c` | Bridge hierarchy per root bridge / device decode | Header, BARs, bridge windows, capabilities and extended capabilities, PCIe link. `Enter` on a device opens it in PCI Devices; `Enter` on a decoded field opens PCI Devices at that register. |
+| ACPI Tables | `Views/AcpiView.c` | Tables from the XSDT (or RSDT) with checksum state / table | FADT, MADT, MCFG, HPET, DMAR decoded; DSDT and SSDT as ASL (method argument counts come from every DSDT/SSDT); `Ctrl+T` switches an AML table between ASL and header + hex. Bad checksums are red. |
+| SMBIOS | `Views/SmbiosView.c` | Structures (type, handle, name) / structure | Decoded fields for types 0-4, 7-9, 11-13, 16, 17, 19, 32, 41, then the string set and hex. |
+| USB Devices | `Views/UsbView.c` | Controller -> port -> device tree / controller or device | Port states, new / removed marks between scans (held 10 s), device and configuration descriptors, hub port status. `F5` rescans. Only standard read requests are sent. |
+
 ## Tests
+
+`SelfTestDecoders.c` checks the PCIe Tree (decode, PCI Express capability,
+both jumps into PCI Devices), ACPI (checksums, FADT fields, DSDT as ASL,
+`Ctrl+T`, focus skipping the hidden pane), SMBIOS (System Information
+strings, End-of-Table) and USB (xHCI, the QEMU keyboard / tablet
+descriptors, rescan keeps the selection).
 
 `SelfTestViews.c` opens all six windows through their commands and drives
 them with keys: device selection, BAR write cancelled, memory map jump,
@@ -31,3 +50,5 @@ cancelled, custom Index/Data pair, CMOS writes to spare bytes 38h/39h,
 adding MSRs and writing IA32_PAT back with its own value.
 
 ![Phase 3 windows in QEMU at 1024x768](Images/phase3-views.png)
+
+![Phase 4 windows in QEMU at 1024x768](Images/phase4-decoders.png)

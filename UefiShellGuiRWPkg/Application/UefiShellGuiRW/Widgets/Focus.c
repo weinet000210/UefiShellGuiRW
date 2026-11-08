@@ -157,6 +157,23 @@ RwFocusGet (
   return Window->Focus[Window->FocusIndex];
 }
 
+STATIC
+BOOLEAN
+WidgetHidden (
+  IN RW_WIDGET  *Widget
+  )
+{
+  lv_obj_t  *Obj;
+
+  for (Obj = Widget->Obj; Obj != NULL; Obj = lv_obj_get_parent (Obj)) {
+    if (lv_obj_is_hidden (Obj)) {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
 BOOLEAN
 RwFocusHandleKey (
   IN CONST UEFI_GUI_KEY_EVENT  *Key
@@ -165,6 +182,7 @@ RwFocusHandleKey (
   RW_MDI_WINDOW  *Window;
   RW_WIDGET      *Widget;
   UINTN          Next;
+  UINTN          Tries;
 
   Window = RwMdiGetActive ();
   if ((Window == NULL) || Window->Minimized || (Window->FocusCount == 0)) {
@@ -177,14 +195,21 @@ RwFocusHandleKey (
   }
 
   if ((Key->UnicodeChar == CHAR_TAB) && ((Key->Modifiers & (UEFI_GUI_KEY_MOD_CTRL | UEFI_GUI_KEY_MOD_ALT)) == 0)) {
-    if (Window->FocusCount > 1) {
+    //
+    // Skip widgets that are hidden (a view can swap panes in one place).
+    //
+    Next = Window->FocusIndex;
+    for (Tries = 1; Tries < Window->FocusCount; Tries++) {
       if ((Key->Modifiers & UEFI_GUI_KEY_MOD_SHIFT) != 0) {
-        Next = (Window->FocusIndex + Window->FocusCount - 1) % Window->FocusCount;
+        Next = (Next + Window->FocusCount - 1) % Window->FocusCount;
       } else {
-        Next = (Window->FocusIndex + 1) % Window->FocusCount;
+        Next = (Next + 1) % Window->FocusCount;
       }
 
-      RwFocusSet (Window->Focus[Next]);
+      if (!WidgetHidden (Window->Focus[Next])) {
+        RwFocusSet (Window->Focus[Next]);
+        break;
+      }
     }
 
     return TRUE;
