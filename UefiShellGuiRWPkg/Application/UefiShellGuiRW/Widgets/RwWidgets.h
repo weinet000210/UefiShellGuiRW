@@ -510,7 +510,8 @@ RwBitFieldGetCursor (
 //
 // The engine under the tree view, property table, table and text view:
 // fixed-height rows drawn on demand, so a list of 100 000 rows costs as
-// much as one screenful. Optional column header. Keyboard selection,
+// much as one screenful. Text wider than the list scrolls sideways: Left /
+// Right (Shift+Left / Shift+Right in a tree), the scroll bar or dragging. Optional column header. Keyboard selection,
 // click to select, double-click / Enter to activate.
 //
 typedef struct _RW_VLIST RW_VLIST;
@@ -647,6 +648,30 @@ RwVListColumnSpan (
   IN  CONST lv_area_t  *Row,
   IN  UINTN            Index,
   OUT lv_area_t        *Cell
+  );
+
+/** Pixel width of a one-line text. **/
+INT32
+RwTextWidth (
+  IN CONST lv_font_t  *Font,
+  IN CONST CHAR8      *Text
+  );
+
+/**
+  Make the scrollable width at least Width pixels (long text in the last
+  column), so it can be scrolled into view.
+**/
+VOID
+RwVListFitWidth (
+  IN RW_VLIST  *List,
+  IN INT32     Width
+  );
+
+/** Left edge of column Index relative to the row (0 for the first). **/
+INT32
+RwVListColumnX (
+  IN RW_VLIST  *List,
+  IN UINTN     Index
   );
 
 /**

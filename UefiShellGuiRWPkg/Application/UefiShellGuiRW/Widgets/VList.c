@@ -260,6 +260,34 @@ OnFocus (
   lv_obj_invalidate (List->Body);
 }
 
+/**
+  Left / Right: scroll the rows sideways (when they are wider than the list).
+**/
+STATIC
+BOOLEAN
+ScrollSideways (
+  IN RW_VLIST                  *List,
+  IN CONST UEFI_GUI_KEY_EVENT  *Key
+  )
+{
+  INT32  Step;
+  INT32  Max;
+  INT32  X;
+
+  if ((Key->ScanCode != SCAN_LEFT) && (Key->ScanCode != SCAN_RIGHT)) {
+    return FALSE;
+  }
+
+  lv_obj_update_layout (List->Body);
+  Step = 4 * lv_font_get_glyph_width (List->Font, '0', 0);
+  Max  = lv_obj_get_width (List->Spacer) - lv_obj_get_content_width (List->Body);
+  X    = lv_obj_get_scroll_x (List->Body) + ((Key->ScanCode == SCAN_RIGHT) ? Step : -Step);
+  X    = MAX (0, MIN (X, MAX (Max, 0)));
+  lv_obj_scroll_to_x (List->Body, X, LV_ANIM_OFF);
+  RwVListInvalidate (List);
+  return TRUE;
+}
+
 STATIC
 BOOLEAN
 OnKey (
@@ -272,7 +300,15 @@ OnKey (
   UINTN     Sel;
 
   List = (RW_VLIST *)Widget;
+  if (((Key->Modifiers & UEFI_GUI_KEY_MOD_SHIFT) != 0) && ScrollSideways (List, Key)) {
+    return TRUE;
+  }
+
   if ((List->ExtraKey != NULL) && List->ExtraKey (List, Key)) {
+    return TRUE;
+  }
+
+  if (((Key->Modifiers & (UEFI_GUI_KEY_MOD_CTRL | UEFI_GUI_KEY_MOD_ALT)) == 0) && ScrollSideways (List, Key)) {
     return TRUE;
   }
 
@@ -420,6 +456,37 @@ RwVListSetContentWidth (
   )
 {
   lv_obj_set_width (List->Spacer, MAX (Width, 1));
+  if (Width <= 1) {
+    lv_obj_scroll_to_x (List->Body, 0, LV_ANIM_OFF);
+  }
+}
+
+VOID
+RwVListFitWidth (
+  IN RW_VLIST  *List,
+  IN INT32     Width
+  )
+{
+  if (Width > lv_obj_get_width (List->Spacer)) {
+    lv_obj_set_width (List->Spacer, Width);
+  }
+}
+
+INT32
+RwVListColumnX (
+  IN RW_VLIST  *List,
+  IN UINTN     Index
+  )
+{
+  UINTN  I;
+  INT32  X;
+
+  X = 0;
+  for (I = 0; (I < Index) && (I < List->ColumnCount); I++) {
+    X += List->Columns[I].Width;
+  }
+
+  return X;
 }
 
 VOID

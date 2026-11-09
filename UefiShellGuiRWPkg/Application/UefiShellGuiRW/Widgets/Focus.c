@@ -303,6 +303,22 @@ RwKeyHexDigit (
 // ---- Drawing -----------------------------------------------------------------
 //
 
+INT32
+RwTextWidth (
+  IN CONST lv_font_t  *Font,
+  IN CONST CHAR8      *Text
+  )
+{
+  INT32  Width;
+
+  Width = 0;
+  for ( ; (Text != NULL) && (*Text != '\0'); Text++) {
+    Width += lv_font_get_glyph_width (Font, (UINT8)Text[0], (UINT8)Text[1]);
+  }
+
+  return Width;
+}
+
 VOID
 RwDrawText (
   IN lv_layer_t       *Layer,

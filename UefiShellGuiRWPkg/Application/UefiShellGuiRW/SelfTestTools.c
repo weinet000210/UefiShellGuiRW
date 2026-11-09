@@ -307,6 +307,20 @@ TestFiles (
     (BOOLEAN)(FindEntry (F, "UefiShellGuiRW.efi") >= 0 && FindEntry (F, "RWTEST.TXT") >= 0 && FindEntry (F, "RWTEST.BIN") >= 0));
 
   //
+  // A long device path in the last column scrolls into view with Right.
+  //
+  RwFocusSet (&RwTableList (F->Volumes)->Base);
+  Key (SCAN_RIGHT, 0, 0);
+  Key (SCAN_RIGHT, 0, 0);
+  Pump (30);
+  Check ("lists: Right scrolls a long last column into view", (BOOLEAN)(lv_obj_get_scroll_x (RwTableList (F->Volumes)->Body) > 0));
+  Key (SCAN_LEFT, 0, 0);
+  Key (SCAN_LEFT, 0, 0);
+  Pump (30);
+  Check ("lists: Left scrolls back", (BOOLEAN)(lv_obj_get_scroll_x (RwTableList (F->Volumes)->Body) == 0));
+  RwFocusSet (&RwTableList (F->Entries)->Base);
+
+  //
   // Text editor.
   //
   Row = FindEntry (F, "RWTEST.TXT");
