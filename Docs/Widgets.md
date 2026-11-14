@@ -7,7 +7,7 @@ blocks every module view uses. `RwWidgets.h` is the only header.
 |---|---|---|
 | HexGrid | HexGrid.c | One 256-byte page of an `RW_DATA_SOURCE`: address column, 16 bytes per row as byte / word / dword cells, ASCII column |
 | BitFieldView | BitField.c | The bits of one 8-64 bit value as boxes, highest bit first, rows of 16 |
-| VList | VList.c | Engine of the lists below: fixed-height rows drawn on demand (only the visible rows cost anything), optional column header. Text wider than the list (last column, tree rows, property values) scrolls sideways with Left / Right (Shift+Left / Shift+Right in a tree), the scroll bar or dragging |
+| VList | VList.c | Engine of the lists below: fixed-height rows drawn on demand (only the visible rows cost anything), optional column header. Text wider than the list (last column, tree rows, property values) scrolls sideways with Left / Right (Shift+Left / Shift+Right in a tree), the scroll bar or dragging. Fixed columns widen to their longest text. Headings and status bar text longer than their space scroll back and forth on their own |
 | TreeView | InfoViews.c | An `RW_INFO` as a tree: a row followed by deeper rows gets a [+]/[-] box |
 | PropTable | InfoViews.c | An `RW_INFO` as Field / Offset / Value; sections are shaded group rows |
 | Table | InfoViews.c | String cells under column headers (device lists) |

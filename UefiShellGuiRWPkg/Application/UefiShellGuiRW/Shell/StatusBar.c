@@ -37,7 +37,7 @@ Panel (
   lv_obj_set_scrollable (Obj, FALSE);
   Label = lv_label_create (Obj);
   lv_label_set_text (Label, "");
-  lv_label_set_long_mode (Label, LV_LABEL_LONG_MODE_DOTS);
+  lv_label_set_long_mode (Label, LV_LABEL_LONG_MODE_SCROLL);   // long text scrolls back and forth
   lv_obj_set_width (Label, LV_PCT (100));
   lv_obj_align (Label, LV_ALIGN_LEFT_MID, 0, 0);
   return Label;

@@ -64,7 +64,11 @@ RwViewLabel (
 
   Obj = lv_label_create (Parent);
   lv_label_set_text (Obj, Text);
-  lv_label_set_long_mode (Obj, LV_LABEL_LONG_MODE_CLIP);
+  //
+  // A heading longer than the pane scrolls back and forth on its own, so
+  // the whole text can be read.
+  //
+  lv_label_set_long_mode (Obj, LV_LABEL_LONG_MODE_SCROLL);
   lv_obj_set_width (Obj, LV_PCT (100));
   lv_obj_set_style_text_color (Obj, lv_color_hex (RW_COLOR_STRONG), 0);
   lv_obj_set_event_bubble (Obj, TRUE);

@@ -389,7 +389,7 @@ RwTreeViewSetInfo (
     Tree->Expanded[Index] = (BOOLEAN)(Tree->Info.Rows[Index].Level < ExpandLevels);
   }
 
-  RwVListSetContentWidth (Tree->List, 1);
+  RwVListResetWidth (Tree->List);
   for (Index = 0; Index < Tree->Info.Count; Index++) {
     RwStrInit (&Str);
     RowText (&Tree->Info.Rows[Index], &Str);
@@ -677,19 +677,19 @@ RwPropTableSetInfo (
   Table->Info = *Info;
   ZeroMem (Info, sizeof (*Info));
   Table->List->Selected = RW_VLIST_NONE;
-  RwVListSetContentWidth (Table->List, 1);
+  RwVListResetWidth (Table->List);
   for (Index = 0; Index < Table->Info.Count; Index++) {
     R = &Table->Info.Rows[Index];
     if (R->Kind == RwKindField) {
-      Width = RwVListColumnX (Table->List, Table->ShowOffset ? 2 : 1) + RwTextWidth (RwMonoFont (), R->Value);
+      RwVListFitCell (Table->List, 0, (INT32)(R->Level > 0 ? R->Level - 1 : 0) * PROP_INDENT + RwTextWidth (Table->List->Font, R->Name));
+      RwVListFitCell (Table->List, Table->ShowOffset ? 2 : 1, RwTextWidth (RwMonoFont (), R->Value));
     } else {
       RwStrInit (&Str);
       RowText (R, &Str);
       Width = 4 + (INT32)R->Level * PROP_INDENT + RwTextWidth ((R->Kind == RwKindSection) ? Table->List->Font : RwMonoFont (), Str.Buf);
       RwStrFree (&Str);
+      RwVListFitWidth (Table->List, Width + 12);
     }
-
-    RwVListFitWidth (Table->List, Width + 12);
   }
 
   RwVListSetRowCount (Table->List, Table->Info.Count);
@@ -881,12 +881,13 @@ RwTableClear (
 {
   TableFreeRows (Table);
   Table->List->Selected = RW_VLIST_NONE;
-  RwVListSetContentWidth (Table->List, 1);
+  RwVListResetWidth (Table->List);
   RwVListSetRowCount (Table->List, 0);
 }
 
 /**
-  Long text in the last column (the one that takes the rest) scrolls into view.
+  A fixed column widens to its longest text; long text in the last column
+  (the one that takes the rest) scrolls into view.
 **/
 STATIC
 VOID
@@ -895,17 +896,11 @@ TableFitRow (
   IN CHAR8     **Cells
   )
 {
-  UINTN  Last;
+  UINTN  Column;
 
-  if (Table->List->ColumnCount == 0) {
-    return;
+  for (Column = 0; Column < Table->List->ColumnCount; Column++) {
+    RwVListFitCell (Table->List, Column, RwTextWidth (Table->Mono ? RwMonoFont () : Table->List->Font, Cells[Column]));
   }
-
-  Last = Table->List->ColumnCount - 1;
-  RwVListFitWidth (
-    Table->List,
-    RwVListColumnX (Table->List, Last) + 12 + RwTextWidth (Table->Mono ? RwMonoFont () : Table->List->Font, Cells[Last])
-    );
 }
 
 STATIC

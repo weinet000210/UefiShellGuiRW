@@ -567,6 +567,8 @@ struct _RW_VLIST {
   VOID               *Owner;      ///< the tree / table that uses the list
   VOID               (*OwnerFree)(VOID *Owner);
   INT32              ClickX;      ///< x of the last click, relative to the row
+  INT32              BaseWidth[RW_VLIST_MAX_COLUMNS];  ///< column widths as set
+  INT32              LastTextWidth;  ///< widest text in the last column
 };
 
 RW_VLIST *
@@ -665,6 +667,23 @@ VOID
 RwVListFitWidth (
   IN RW_VLIST  *List,
   IN INT32     Width
+  );
+
+/**
+  Text TextWidth pixels wide goes in column Index: a fixed column widens to
+  show it, and the last column's text widens the scroll area.
+**/
+VOID
+RwVListFitCell (
+  IN RW_VLIST  *List,
+  IN UINTN     Index,
+  IN INT32     TextWidth
+  );
+
+/** Back to the column widths as set and no extra scroll width (new content). **/
+VOID
+RwVListResetWidth (
+  IN RW_VLIST  *List
   );
 
 /** Left edge of column Index relative to the row (0 for the first). **/

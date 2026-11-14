@@ -205,6 +205,16 @@ RwSelfTestWidgets (
   Check ("table: Down, Down, Enter activates row 1", (BOOLEAN)(T->TableActivated == 1));
   Key (SCAN_END, 0, 0);
   Check ("table: End selects the last row", (BOOLEAN)(RwTableList (T->Table)->Selected == RwTableRowCount (T->Table) - 1));
+  {
+    CONST CHAR8  *Wide[] = { "00:1F.7 (a device name far wider than its column)", "1234:5678", "Class" };
+    INT32        Before;
+
+    Before = RwTableList (T->Table)->Columns[0].Width;
+    RwTableSetRow (T->Table, 0, Wide, 0);
+    Check ("table: a fixed column widens to its longest text", (BOOLEAN)(RwTableList (T->Table)->Columns[0].Width > Before));
+    Check ("table: the header follows the wider column", (BOOLEAN)(RwVListColumnX (RwTableList (T->Table), 2) > RwTableList (T->Table)->BaseWidth[0] + RwTableList (T->Table)->BaseWidth[1]));
+  }
+
 
   //
   // Tree.

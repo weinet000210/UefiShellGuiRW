@@ -428,8 +428,14 @@ RwVListSetColumns (
 {
   lv_obj_t  *Obj;
 
+  UINTN     Index;
+
   List->ColumnCount = MIN (Count, RW_VLIST_MAX_COLUMNS);
   CopyMem (List->Columns, Columns, List->ColumnCount * sizeof (RW_VLIST_COLUMN));
+  for (Index = 0; Index < List->ColumnCount; Index++) {
+    List->BaseWidth[Index] = List->Columns[Index].Width;
+  }
+
   if (List->Header == NULL) {
     Obj = lv_obj_create (List->Base.Obj);
     lv_obj_remove_style_all (Obj);
@@ -470,6 +476,46 @@ RwVListFitWidth (
   if (Width > lv_obj_get_width (List->Spacer)) {
     lv_obj_set_width (List->Spacer, Width);
   }
+}
+
+VOID
+RwVListFitCell (
+  IN RW_VLIST  *List,
+  IN UINTN     Index,
+  IN INT32     TextWidth
+  )
+{
+  if (Index >= List->ColumnCount) {
+    return;
+  }
+
+  if ((Index + 1 < List->ColumnCount) && (List->Columns[Index].Width > 0)) {
+    if (TextWidth + 2 * HEADER_PAD + 4 > List->Columns[Index].Width) {
+      List->Columns[Index].Width = TextWidth + 2 * HEADER_PAD + 4;
+      RwVListInvalidate (List);
+    }
+  } else if (Index + 1 == List->ColumnCount) {
+    List->LastTextWidth = MAX (List->LastTextWidth, TextWidth);
+  }
+
+  RwVListFitWidth (List, RwVListColumnX (List, List->ColumnCount - 1) + 2 * HEADER_PAD + 8 + List->LastTextWidth);
+}
+
+VOID
+RwVListResetWidth (
+  IN RW_VLIST  *List
+  )
+{
+  UINTN  Index;
+
+  for (Index = 0; Index < List->ColumnCount; Index++) {
+    List->Columns[Index].Width = List->BaseWidth[Index];
+  }
+
+  List->LastTextWidth = 0;
+  lv_obj_set_width (List->Spacer, 1);
+  lv_obj_scroll_to_x (List->Body, 0, LV_ANIM_OFF);
+  RwVListInvalidate (List);
 }
 
 INT32
