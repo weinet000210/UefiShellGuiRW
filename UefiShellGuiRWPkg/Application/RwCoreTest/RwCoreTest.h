@@ -57,5 +57,8 @@ VOID TestSmbus  (VOID);
 VOID TestStorage (VOID);
 VOID TestEdid   (VOID);
 VOID TestTools  (VOID);
+VOID TestCpuid  (VOID);
+VOID TestUefi   (VOID);
+VOID TestCalc   (VOID);
 
 #endif

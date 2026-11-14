@@ -24,5 +24,8 @@
 #include <Library/RwCore/RwStorage.h>
 #include <Library/RwCore/RwEdid.h>
 #include <Library/RwCore/RwTools.h>
+#include <Library/RwCore/RwCpuid.h>
+#include <Library/RwCore/RwUefi.h>
+#include <Library/RwCore/RwCalc.h>
 
 #endif

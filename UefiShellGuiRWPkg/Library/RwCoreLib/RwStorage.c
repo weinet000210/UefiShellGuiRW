@@ -1,6 +1,7 @@
 /** @file
   RwCoreLib storage: ATA / ATAPI IDENTIFY and NVMe Identify through the
-  firmware's pass-thru protocols, and their decoders.
+  firmware's pass-thru protocols, the read-only health data (ATA SMART READ
+  DATA / THRESHOLDS, NVMe log pages 01h-03h), and their decoders.
 
   Copyright (c) 2026, Niall Tseng. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -21,6 +22,13 @@
 #define NVME_CNS_CONTROLLER      1
 #define ID_ATA_SIZE              512
 #define ID_NVME_SIZE             4096
+#define ATA_CMD_SMART            0xB0
+#define ATA_SMART_READ_DATA      0xD0
+#define ATA_SMART_READ_THRESH    0xD1
+#define NVME_OPC_GET_LOG         0x02
+#define NVME_LOG_ERROR           0x01
+#define NVME_LOG_HEALTH          0x02
+#define NVME_LOG_FW_SLOT         0x03
 
 CONST CHAR8 *
 RwStorageKindName (
@@ -203,6 +211,39 @@ AtaIdentify (
 }
 
 STATIC
+EFI_STATUS
+AtaSmartRead (
+  IN  EFI_ATA_PASS_THRU_PROTOCOL  *Ata,
+  IN  UINT16                      Port,
+  IN  UINT16                      PmPort,
+  IN  UINT8                       Feature,
+  OUT UINT8                       *Buffer,
+  IN  EFI_ATA_STATUS_BLOCK        *Asb
+  )
+{
+  EFI_ATA_COMMAND_BLOCK             Acb;
+  EFI_ATA_PASS_THRU_COMMAND_PACKET  Packet;
+
+  ZeroMem (&Acb, sizeof (Acb));
+  ZeroMem (Asb, sizeof (*Asb));
+  ZeroMem (&Packet, sizeof (Packet));
+  Acb.AtaCommand          = ATA_CMD_SMART;
+  Acb.AtaFeatures         = Feature;
+  Acb.AtaSectorCount      = 1;
+  Acb.AtaCylinderLow      = 0x4F;     // SMART signature
+  Acb.AtaCylinderHigh     = 0xC2;
+  Acb.AtaDeviceHead       = (UINT8)(BIT7 | BIT6 | BIT5 | ((PmPort == 0xFFFF) ? 0 : ((PmPort & 1) << 4)));
+  Packet.Acb              = &Acb;
+  Packet.Asb              = Asb;
+  Packet.Timeout          = ATA_TIMEOUT_100NS;
+  Packet.InDataBuffer     = Buffer;
+  Packet.InTransferLength = 512;
+  Packet.Protocol         = EFI_ATA_PASS_THRU_PROTOCOL_PIO_DATA_IN;
+  Packet.Length           = EFI_ATA_PASS_THRU_LENGTH_BYTES;
+  return Ata->PassThru (Ata, Port, PmPort, &Packet, NULL);
+}
+
+STATIC
 VOID
 AddDev (
   IN OUT RW_STORAGE_LIST  *List,
@@ -236,6 +277,7 @@ AddDev (
   D->PmPort = PmPort;
   D->Nsid   = Nsid;
   D->Size   = Size;
+  D->HealthStatus = (Kind == RwStorNvmeNs) ? EFI_NOT_FOUND : EFI_UNSUPPORTED;
   AsciiStrCpyS (D->Location, sizeof (D->Location), Where);
   switch (Kind) {
     case RwStorAta:
@@ -258,6 +300,53 @@ AddDev (
   List->Count++;
 }
 
+/**
+  SMART data and thresholds of the last added ATA device, only when the
+  drive reports SMART supported and enabled (word 82 / 85 bit 0).
+**/
+STATIC
+VOID
+AtaHealth (
+  IN OUT RW_STORAGE_DEV              *D,
+  IN     EFI_ATA_PASS_THRU_PROTOCOL  *Ata,
+  IN     UINT8                       *Buffer,
+  IN     EFI_ATA_STATUS_BLOCK        *Asb
+  )
+{
+  UINT8       *Health;
+  EFI_STATUS  Status;
+
+  if (((W (D->Data, 82) & BIT0) == 0) || ((W (D->Data, 85) & BIT0) == 0)) {
+    D->HealthStatus = EFI_UNSUPPORTED;
+    return;
+  }
+
+  Health = AllocateZeroPool (1024);
+  if (Health == NULL) {
+    D->HealthStatus = EFI_OUT_OF_RESOURCES;
+    return;
+  }
+
+  ZeroMem (Buffer, 512);
+  Status = AtaSmartRead (Ata, D->Port, D->PmPort, ATA_SMART_READ_DATA, Buffer, Asb);
+  if (!EFI_ERROR (Status)) {
+    CopyMem (&Health[RW_ATA_SMART_DATA], Buffer, 512);
+    ZeroMem (Buffer, 512);
+    if (!EFI_ERROR (AtaSmartRead (Ata, D->Port, D->PmPort, ATA_SMART_READ_THRESH, Buffer, Asb))) {
+      CopyMem (&Health[RW_ATA_SMART_THRESH], Buffer, 512);
+    }
+  }
+
+  D->HealthStatus = Status;
+  if (EFI_ERROR (Status)) {
+    FreePool (Health);
+    return;
+  }
+
+  D->Health     = Health;
+  D->HealthSize = 1024;
+}
+
 STATIC
 VOID
 ScanAta (
@@ -275,6 +364,8 @@ ScanAta (
   UINTN                       Align;
   CHAR8                       Where[96];
   UINTN                       Guard;
+  UINTN                       Devices;
+  UINTN                       Before;
 
   if (EFI_ERROR (gBS->LocateHandleBuffer (ByProtocol, &gEfiAtaPassThruProtocolGuid, NULL, &Count, &Handles))) {
     return;
@@ -303,20 +394,25 @@ ScanAta (
     Location (Handles[H], Where, sizeof (Where));
     Port = 0xFFFF;
     for (Guard = 0; Guard < 64 && !EFI_ERROR (Ata->GetNextPort (Ata, &Port)); Guard++) {
+      //
+      // GetNextDevice is walked until it fails: edk2's AtaAtapiPassThru keeps
+      // the last port multiplier port it returned, and stopping early leaves
+      // that state behind so the next scan would find no device on the port.
+      //
       PmPort = 0xFFFF;
-      while (!EFI_ERROR (Ata->GetNextDevice (Ata, Port, &PmPort))) {
+      for (Devices = 0; Devices < 16 && !EFI_ERROR (Ata->GetNextDevice (Ata, Port, &PmPort)); Devices++) {
         ZeroMem (Buffer, ID_ATA_SIZE);
         if (!EFI_ERROR (AtaIdentify (Ata, Port, PmPort, ATA_CMD_IDENTIFY, Buffer, Asb))) {
+          Before = List->Count;
           AddDev (List, RwStorAta, -1, Port, PmPort, 0, Buffer, ID_ATA_SIZE, Where);
+          if (List->Count > Before) {
+            AtaHealth (&List->Devs[Before], Ata, Buffer, Asb);
+          }
         } else {
           ZeroMem (Buffer, ID_ATA_SIZE);
           if (!EFI_ERROR (AtaIdentify (Ata, Port, PmPort, ATA_CMD_IDENTIFY_PACKET, Buffer, Asb))) {
             AddDev (List, RwStorAtapi, -1, Port, PmPort, 0, Buffer, ID_ATA_SIZE, Where);
           }
-        }
-
-        if (PmPort == 0xFFFF) {
-          break;
         }
       }
     }
@@ -361,6 +457,87 @@ NvmeIdentify (
   return Nvme->PassThru (Nvme, (Cns == NVME_CNS_CONTROLLER) ? 0 : Nsid, &Packet, NULL);
 }
 
+/**
+  Get Log Page into Buffer (Size bytes, a multiple of 4). Nsid FFFFFFFFh is
+  the controller-wide log; the pass-thru namespace must match Cmd.Nsid.
+**/
+STATIC
+EFI_STATUS
+NvmeGetLog (
+  IN  EFI_NVM_EXPRESS_PASS_THRU_PROTOCOL  *Nvme,
+  IN  UINT8                               Lid,
+  IN  UINT32                              Size,
+  OUT UINT8                               *Buffer
+  )
+{
+  EFI_NVM_EXPRESS_PASS_THRU_COMMAND_PACKET  Packet;
+  EFI_NVM_EXPRESS_COMMAND                   Cmd;
+  EFI_NVM_EXPRESS_COMPLETION                Completion;
+
+  ZeroMem (&Packet, sizeof (Packet));
+  ZeroMem (&Cmd, sizeof (Cmd));
+  ZeroMem (&Completion, sizeof (Completion));
+  ZeroMem (Buffer, Size);
+  Cmd.Cdw0.Opcode       = NVME_OPC_GET_LOG;
+  Cmd.Nsid              = 0xFFFFFFFF;
+  Cmd.Cdw10             = Lid | (((Size / 4) - 1) << 16);     // NUMDL, 0's based
+  Cmd.Flags             = CDW10_VALID;
+  Packet.NvmeCmd        = &Cmd;
+  Packet.NvmeCompletion = &Completion;
+  Packet.TransferBuffer = Buffer;
+  Packet.TransferLength = Size;
+  Packet.CommandTimeout = NVME_TIMEOUT_100NS;
+  Packet.QueueType      = NVME_ADMIN_QUEUE;
+  return Nvme->PassThru (Nvme, Cmd.Nsid, &Packet, NULL);
+}
+
+/**
+  Health (02h), Firmware Slot (03h) and Error (01h) logs of the controller
+  last added. Buffer is a page from the caller (aligned for the controller);
+  the identify data gives the number of error log entries (ELPE).
+**/
+STATIC
+VOID
+NvmeHealth (
+  IN OUT RW_STORAGE_DEV                      *D,
+  IN     EFI_NVM_EXPRESS_PASS_THRU_PROTOCOL  *Nvme,
+  IN     UINT8                               *Buffer
+  )
+{
+  UINT8       *Health;
+  UINTN       Errors;
+  EFI_STATUS  Status;
+
+  Errors = MIN ((UINTN)D->Data[262] + 1, RW_NVME_ERRORS_MAX);
+  Health = AllocateZeroPool (RW_NVME_LOG_ERRORS + Errors * RW_NVME_ERROR_ENTRY);
+  if (Health == NULL) {
+    D->HealthStatus = EFI_OUT_OF_RESOURCES;
+    return;
+  }
+
+  Status = NvmeGetLog (Nvme, NVME_LOG_HEALTH, 512, Buffer);
+  D->HealthStatus = Status;
+  if (EFI_ERROR (Status)) {
+    FreePool (Health);
+    return;
+  }
+
+  CopyMem (&Health[RW_NVME_LOG_HEALTH], Buffer, 512);
+  if (!EFI_ERROR (NvmeGetLog (Nvme, NVME_LOG_FW_SLOT, 512, Buffer))) {
+    CopyMem (&Health[RW_NVME_LOG_FW_SLOT], Buffer, 512);
+  }
+
+  if (!EFI_ERROR (NvmeGetLog (Nvme, NVME_LOG_ERROR, (UINT32)(Errors * RW_NVME_ERROR_ENTRY), Buffer))) {
+    CopyMem (&Health[RW_NVME_LOG_ERRORS], Buffer, Errors * RW_NVME_ERROR_ENTRY);
+  } else {
+    Errors = 0;
+  }
+
+  D->Health       = Health;
+  D->HealthErrors = Errors;
+  D->HealthSize   = RW_NVME_LOG_ERRORS + Errors * RW_NVME_ERROR_ENTRY;
+}
+
 STATIC
 VOID
 ScanNvme (
@@ -398,6 +575,9 @@ ScanNvme (
     if (!EFI_ERROR (NvmeIdentify (Nvme, 0, NVME_CNS_CONTROLLER, Buffer))) {
       Ctrl = (INT32)List->Count;
       AddDev (List, RwStorNvmeCtrl, -1, 0, 0, 0, Buffer, ID_NVME_SIZE, Where);
+      if (List->Count > (UINTN)Ctrl) {
+        NvmeHealth (&List->Devs[Ctrl], Nvme, Buffer);
+      }
       Nsid = 0xFFFFFFFF;
       for (Guard = 0; Guard < 1024 && !EFI_ERROR (Nvme->GetNextNamespace (Nvme, &Nsid)); Guard++) {
         ZeroMem (Buffer, ID_NVME_SIZE);
@@ -446,6 +626,10 @@ RwStorageFree (
   for (Index = 0; Index < List->Count; Index++) {
     if (List->Devs[Index].Data != NULL) {
       FreePool (List->Devs[Index].Data);
+    }
+
+    if (List->Devs[Index].Health != NULL) {
+      FreePool (List->Devs[Index].Health);
     }
   }
 
@@ -744,6 +928,327 @@ RwStorageDecode (
 
   RwInfoSection (Info, 0, "Raw identify data (%d bytes)", Dev->Size);
   RwInfoAddHex (Info, 1, Dev->Data, Dev->Size, 0);
+}
+
+//
+// ---- Health decoders -------------------------------------------------------
+//
+
+typedef struct {
+  UINT8          Id;
+  CONST CHAR8    *Name;
+} SMART_ATTR_NAME;
+
+//
+// Common attribute names; vendors reuse some IDs differently.
+//
+STATIC CONST SMART_ATTR_NAME  mSmartNames[] = {
+  {   1, "Raw Read Error Rate" },
+  {   2, "Throughput Performance" },
+  {   3, "Spin-Up Time" },
+  {   4, "Start/Stop Count" },
+  {   5, "Reallocated Sectors Count" },
+  {   7, "Seek Error Rate" },
+  {   8, "Seek Time Performance" },
+  {   9, "Power-On Hours" },
+  {  10, "Spin Retry Count" },
+  {  11, "Calibration Retry Count" },
+  {  12, "Power Cycle Count" },
+  { 170, "Available Reserved Space" },
+  { 171, "Program Fail Count" },
+  { 172, "Erase Fail Count" },
+  { 173, "Wear Leveling Count" },
+  { 174, "Unexpected Power Loss Count" },
+  { 175, "Power Loss Protection Failure" },
+  { 177, "Wear Range Delta" },
+  { 179, "Used Reserved Block Count" },
+  { 180, "Unused Reserved Block Count" },
+  { 181, "Program Fail Count Total" },
+  { 182, "Erase Fail Count Total" },
+  { 183, "SATA Downshift Error Count" },
+  { 184, "End-to-End Error" },
+  { 187, "Reported Uncorrectable Errors" },
+  { 188, "Command Timeout" },
+  { 189, "High Fly Writes" },
+  { 190, "Airflow Temperature" },
+  { 191, "G-Sense Error Rate" },
+  { 192, "Power-off Retract Count" },
+  { 193, "Load Cycle Count" },
+  { 194, "Temperature" },
+  { 195, "Hardware ECC Recovered" },
+  { 196, "Reallocation Event Count" },
+  { 197, "Current Pending Sector Count" },
+  { 198, "Offline Uncorrectable" },
+  { 199, "UDMA CRC Error Count" },
+  { 200, "Write Error Rate" },
+  { 230, "Drive Life Protection Status" },
+  { 231, "SSD Life Left" },
+  { 232, "Endurance Remaining" },
+  { 233, "Media Wearout Indicator" },
+  { 234, "Average / Max Erase Count" },
+  { 235, "Good Block Count" },
+  { 240, "Head Flying Hours" },
+  { 241, "Total LBAs Written" },
+  { 242, "Total LBAs Read" },
+};
+
+CONST CHAR8 *
+RwAtaSmartAttrName (
+  IN UINT8  Id
+  )
+{
+  UINTN  Index;
+
+  for (Index = 0; Index < ARRAY_SIZE (mSmartNames); Index++) {
+    if (mSmartNames[Index].Id == Id) {
+      return mSmartNames[Index].Name;
+    }
+  }
+
+  return "";
+}
+
+STATIC
+CONST CHAR8 *
+SelfTestText (
+  IN UINT8  Status
+  )
+{
+  switch (Status >> 4) {
+    case 0:  return "Passed or never run";
+    case 15: return "In progress";
+    default: return "Failed or aborted";
+  }
+}
+
+/**
+  SMART READ DATA: 30 attribute entries of 12 bytes from offset 2 (ID, flags,
+  current, worst, 6-byte raw); SMART READ THRESHOLDS: same layout, the
+  threshold in byte 1 of the matching ID.
+**/
+STATIC
+VOID
+AtaSmartDecode (
+  IN     CONST UINT8  *Data,
+  IN     CONST UINT8  *Thresh,
+  IN OUT RW_INFO      *Info
+  )
+{
+  UINTN        Index;
+  UINTN        T;
+  CONST UINT8  *E;
+  UINT8        Limit;
+  UINT64       Raw;
+  UINTN        Shown;
+  BOOLEAN      Failing;
+  CONST CHAR8  *Name;
+  CHAR8        Label[48];
+  UINT32       Ext;
+
+  RwInfoSection (Info, 0, "SMART attributes (revision %d)", Data[0] | (Data[1] << 8));
+  Shown = 0;
+  for (Index = 0; Index < 30; Index++) {
+    E = &Data[2 + Index * 12];
+    if (E[0] == 0) {
+      continue;
+    }
+
+    Limit = 0;
+    for (T = 0; T < 30; T++) {
+      if (Thresh[2 + T * 12] == E[0]) {
+        Limit = Thresh[2 + T * 12 + 1];
+        break;
+      }
+    }
+
+    Raw = (UINT64)E[5] | ((UINT64)E[6] << 8) | ((UINT64)E[7] << 16) | ((UINT64)E[8] << 24) |
+          LShiftU64 (E[9], 32) | LShiftU64 (E[10], 40);
+    Failing = (BOOLEAN)((Limit != 0) && (Limit != 0xFE) && (E[3] <= Limit));
+    Name    = RwAtaSmartAttrName (E[0]);
+    AsciiSPrint (Label, sizeof (Label), "%3d %a", E[0], (Name[0] != '\0') ? Name : "Vendor specific");
+    RwInfoSetReg (
+      RwInfoField (
+        Info, 1, Failing ? RwEmAlert : RwEmNormal, Label,
+        "Current %3d  Worst %3d  Threshold %3d  Raw %Ld%a%a",
+        E[3], E[4], Limit, Raw,
+        ((E[1] & BIT0) != 0) ? "  pre-fail" : "",
+        Failing ? "  FAILING" : ""
+        ),
+      (UINT32)(2 + Index * 12),
+      12
+      );
+    Shown++;
+  }
+
+  if (Shown == 0) {
+    RwInfoText (Info, 1, RwEmDim, "No attributes reported");
+  }
+
+  RwInfoSection (Info, 0, "SMART status");
+  RwInfoSetReg (RwInfoField (Info, 1, RwEmNormal, "Offline data collection", "%02Xh", Data[362]), 362, 1);
+  RwInfoSetReg (
+    RwInfoField (Info, 1, ((Data[363] >> 4) != 0 && (Data[363] >> 4) != 15) ? RwEmAlert : RwEmNormal, "Last self-test", "%a (%02Xh)", SelfTestText (Data[363]), Data[363]),
+    363,
+    1
+    );
+  Ext = (Data[373] == 0xFF) ? (UINT32)(Data[375] | (Data[376] << 8)) : Data[373];
+  RwInfoField (Info, 1, RwEmNormal, "Short / extended self-test", "%d / %d minutes", Data[372], Ext);
+}
+
+STATIC
+UINT64
+Le64 (
+  IN CONST UINT8  *P
+  )
+{
+  return ReadUnaligned64 ((CONST UINT64 *)P);
+}
+
+/**
+  NVMe SMART / Health (02h), Firmware Slot (03h) and Error Information (01h)
+  log pages as stored in Dev->Health.
+**/
+STATIC
+VOID
+NvmeHealthDecode (
+  IN     CONST RW_STORAGE_DEV  *Dev,
+  IN OUT RW_INFO               *Info
+  )
+{
+  STATIC CONST CHAR8  *Warn[] = {
+    "spare below threshold", "temperature", "reliability degraded", "read-only",
+    "volatile backup failed", "PMR read-only"
+  };
+  CONST UINT8         *H;
+  CONST UINT8         *E;
+  CHAR8               Text[160];
+  CHAR8               Slot[9];
+  UINTN               Index;
+  UINT16              Kelvin;
+  UINTN               Shown;
+  UINT64              Units;
+
+  H = &Dev->Health[RW_NVME_LOG_HEALTH];
+  RwInfoSection (Info, 0, "SMART / Health log (02h)");
+  Text[0] = '\0';
+  for (Index = 0; Index < ARRAY_SIZE (Warn); Index++) {
+    if ((H[0] & (1 << Index)) != 0) {
+      AsciiStrCatS (Text, sizeof (Text), (Text[0] != '\0') ? ", " : " ");
+      AsciiStrCatS (Text, sizeof (Text), Warn[Index]);
+    }
+  }
+
+  RwInfoSetReg (RwInfoField (Info, 1, (H[0] != 0) ? RwEmAlert : RwEmNormal, "Critical warning", "%02Xh %a", H[0], (Text[0] != '\0') ? Text : " none"), 0, 1);
+  Kelvin = (UINT16)(H[1] | (H[2] << 8));
+  RwInfoSetReg (RwInfoField (Info, 1, RwEmStrong, "Composite temperature", "%d C (%d K)", (INT32)Kelvin - 273, Kelvin), 1, 2);
+  RwInfoSetReg (RwInfoField (Info, 1, (H[3] < H[4]) ? RwEmAlert : RwEmNormal, "Available spare", "%d%% (threshold %d%%)", H[3], H[4]), 3, 2);
+  RwInfoSetReg (RwInfoField (Info, 1, RwEmNormal, "Percentage used", "%d%%", H[5]), 5, 1);
+  Units = Le64 (&H[32]);
+  RwInfoSetReg (RwInfoField (Info, 1, RwEmNormal, "Data units read", "%Ld (%Ld MB)", Units, DivU64x32 (MultU64x32 (Units, 512), 1000)), 32, 16);
+  Units = Le64 (&H[48]);
+  RwInfoSetReg (RwInfoField (Info, 1, RwEmNormal, "Data units written", "%Ld (%Ld MB)", Units, DivU64x32 (MultU64x32 (Units, 512), 1000)), 48, 16);
+  RwInfoSetReg (RwInfoField (Info, 1, RwEmNormal, "Host read commands", "%Ld", Le64 (&H[64])), 64, 16);
+  RwInfoSetReg (RwInfoField (Info, 1, RwEmNormal, "Host write commands", "%Ld", Le64 (&H[80])), 80, 16);
+  RwInfoSetReg (RwInfoField (Info, 1, RwEmNormal, "Controller busy time", "%Ld minutes", Le64 (&H[96])), 96, 16);
+  RwInfoSetReg (RwInfoField (Info, 1, RwEmNormal, "Power cycles", "%Ld", Le64 (&H[112])), 112, 16);
+  RwInfoSetReg (RwInfoField (Info, 1, RwEmNormal, "Power-on hours", "%Ld", Le64 (&H[128])), 128, 16);
+  RwInfoSetReg (RwInfoField (Info, 1, RwEmNormal, "Unsafe shutdowns", "%Ld", Le64 (&H[144])), 144, 16);
+  RwInfoSetReg (RwInfoField (Info, 1, (Le64 (&H[160]) != 0) ? RwEmAlert : RwEmNormal, "Media and data integrity errors", "%Ld", Le64 (&H[160])), 160, 16);
+  RwInfoSetReg (RwInfoField (Info, 1, RwEmNormal, "Error log entries", "%Ld", Le64 (&H[176])), 176, 16);
+  RwInfoSetReg (
+    RwInfoField (Info, 1, RwEmNormal, "Warning / critical temperature time", "%d / %d minutes", ReadUnaligned32 ((CONST UINT32 *)&H[192]), ReadUnaligned32 ((CONST UINT32 *)&H[196])),
+    192,
+    8
+    );
+  for (Index = 0; Index < 8; Index++) {
+    Kelvin = (UINT16)(H[200 + Index * 2] | (H[201 + Index * 2] << 8));
+    if (Kelvin != 0) {
+      AsciiSPrint (Text, sizeof (Text), "Temperature sensor %d", Index + 1);
+      RwInfoSetReg (RwInfoField (Info, 1, RwEmNormal, Text, "%d C", (INT32)Kelvin - 273), (UINT32)(200 + Index * 2), 2);
+    }
+  }
+
+  H = &Dev->Health[RW_NVME_LOG_FW_SLOT];
+  RwInfoSection (Info, 0, "Firmware slot log (03h)");
+  RwInfoSetReg (RwInfoField (Info, 1, RwEmStrong, "Active slot", "%d (next reset: %d)", H[0] & 0x07, (H[0] >> 4) & 0x07), RW_NVME_LOG_FW_SLOT, 1);
+  for (Index = 1; Index <= 7; Index++) {
+    E = &H[8 * Index];
+    if (E[0] == 0) {
+      continue;
+    }
+
+    CopyMem (Slot, E, 8);
+    Slot[8] = '\0';
+    AsciiSPrint (Text, sizeof (Text), "Slot %d", Index);
+    RwInfoSetReg (RwInfoField (Info, 1, (Index == (UINTN)(H[0] & 0x07)) ? RwEmStrong : RwEmNormal, Text, "%a", Slot), (UINT32)(RW_NVME_LOG_FW_SLOT + 8 * Index), 8);
+  }
+
+  RwInfoSection (Info, 0, "Error information log (01h), %d entries read", Dev->HealthErrors);
+  Shown = 0;
+  for (Index = 0; Index < Dev->HealthErrors; Index++) {
+    E = &Dev->Health[RW_NVME_LOG_ERRORS + Index * RW_NVME_ERROR_ENTRY];
+    if (Le64 (E) == 0) {
+      continue;
+    }
+
+    AsciiSPrint (Text, sizeof (Text), "Error %Ld", Le64 (E));
+    RwInfoSetReg (
+      RwInfoField (
+        Info, 1, RwEmAlert, Text, "SQ %d  CID %04Xh  status %04Xh  LBA %Lxh  NSID %d",
+        E[8] | (E[9] << 8), E[10] | (E[11] << 8), E[12] | (E[13] << 8),
+        Le64 (&E[16]), ReadUnaligned32 ((CONST UINT32 *)&E[24])
+        ),
+      (UINT32)(RW_NVME_LOG_ERRORS + Index * RW_NVME_ERROR_ENTRY),
+      RW_NVME_ERROR_ENTRY
+      );
+    Shown++;
+  }
+
+  if (Shown == 0) {
+    RwInfoText (Info, 1, RwEmDim, "No errors logged");
+  }
+}
+
+VOID
+RwStorageHealthDecode (
+  IN     CONST RW_STORAGE_DEV  *Dev,
+  IN OUT RW_INFO               *Info
+  )
+{
+  if (Dev->Kind == RwStorNvmeNs) {
+    RwInfoSection (Info, 0, "Health");
+    RwInfoText (Info, 1, RwEmDim, "NVMe health logs belong to the controller: select it in the list.");
+    return;
+  }
+
+  if (Dev->Kind == RwStorAtapi) {
+    RwInfoSection (Info, 0, "Health");
+    RwInfoText (Info, 1, RwEmDim, "ATAPI devices have no SMART data.");
+    return;
+  }
+
+  if ((Dev->Health == NULL) || EFI_ERROR (Dev->HealthStatus)) {
+    RwInfoSection (Info, 0, "Health");
+    if (Dev->HealthStatus == EFI_UNSUPPORTED) {
+      RwInfoText (Info, 1, RwEmDim, "SMART is not supported or not enabled on this drive (it is never enabled from here).");
+    } else {
+      RwInfoText (Info, 1, RwEmAlert, "The drive refused the request (%r).", Dev->HealthStatus);
+    }
+
+    return;
+  }
+
+  if (Dev->Kind == RwStorAta) {
+    AtaSmartDecode (&Dev->Health[RW_ATA_SMART_DATA], &Dev->Health[RW_ATA_SMART_THRESH], Info);
+    RwInfoSection (Info, 0, "Raw SMART data (512 bytes)");
+    RwInfoAddHex (Info, 1, &Dev->Health[RW_ATA_SMART_DATA], 512, 0);
+    RwInfoSection (Info, 0, "Raw SMART thresholds (512 bytes)");
+    RwInfoAddHex (Info, 1, &Dev->Health[RW_ATA_SMART_THRESH], 512, 0);
+  } else {
+    NvmeHealthDecode (Dev, Info);
+    RwInfoSection (Info, 0, "Raw log data (%d bytes)", Dev->HealthSize);
+    RwInfoAddHex (Info, 1, Dev->Health, Dev->HealthSize, 0);
+  }
 }
 
 typedef struct {

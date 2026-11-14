@@ -256,6 +256,35 @@ def ic_files(d):
     d.rectangle(P(5, 10, 15, 11.2), fill=(140, 100, 20))
 
 
+def ic_cpuid(d):
+    chip(d, 2, 3, 18, 17, body=(60, 60, 140), label="ID", px=8)
+
+
+def ic_handles(d):
+    # Handle tree: a root node with three children.
+    d.rectangle(P(2, 2, 8, 7), fill=(230, 180, 60), outline=(120, 80, 10), width=SS)
+    d.line(P(5, 7, 5, 16.5), fill=(90, 90, 90), width=SS)
+    for y in (9.5, 13, 16.5):
+        d.line(P(5, y, 10, y), fill=(90, 90, 90), width=SS)
+    for y, c in ((8, (60, 120, 200)), (11.5, (60, 160, 90)), (15, (200, 70, 60))):
+        d.rectangle(P(10, y, 18, y + 3), fill=c, outline=(40, 40, 40))
+
+
+def ic_system(d):
+    # A board with the UEFI "U".
+    d.rounded_rectangle(P(1, 2, 19, 18), radius=2 * SS, fill=(20, 110, 170), outline=(10, 60, 100), width=SS)
+    text(d, 10, 10, "UEFI", 5, (255, 255, 255))
+
+
+def ic_calc(d):
+    d.rounded_rectangle(P(3, 1, 17, 19), radius=SS, fill=(70, 70, 80), outline=(30, 30, 40), width=SS)
+    d.rectangle(P(5, 3, 15, 7), fill=(170, 210, 160))
+    for r in range(3):
+        for c in range(3):
+            x, y = 5 + c * 3.6, 9 + r * 3.4
+            d.rectangle(P(x, y, x + 2.4, y + 2.2), fill=(220, 220, 220) if c < 2 else (240, 150, 40))
+
+
 def ic_exit(d):
     d.rectangle(P(3, 1, 13, 19), fill=(150, 90, 40), outline=(80, 40, 10), width=SS)
     d.ellipse(P(10, 9, 12, 11), fill=(240, 200, 60))
@@ -269,6 +298,7 @@ ICONS = [
     ("Smbios", ic_smbios), ("Edid", ic_edid), ("ComPort", ic_com), ("PcieTree", ic_tree),
     ("Refresh", ic_refresh), ("Screenshot", ic_shot), ("DumpAll", ic_dump),
     ("WriteLog", ic_wlog), ("Files", ic_files),
+    ("Cpuid", ic_cpuid), ("Handles", ic_handles), ("System", ic_system), ("Calc", ic_calc),
     ("Cascade", ic_cascade), ("TileH", ic_tileh), ("TileV", ic_tilev),
     ("About", ic_about), ("Exit", ic_exit),
 ]

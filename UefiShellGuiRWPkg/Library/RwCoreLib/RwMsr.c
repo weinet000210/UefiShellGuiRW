@@ -240,6 +240,14 @@ Mp (
   return mMp;
 }
 
+VOID *
+RwCoreMp (
+  VOID
+  )
+{
+  return Mp ();
+}
+
 UINTN
 RwCpuCount (
   VOID

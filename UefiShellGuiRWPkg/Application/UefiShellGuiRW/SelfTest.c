@@ -118,8 +118,17 @@ RwSelfTestRun (
   DesktopH = lv_obj_get_content_height (gRwFrame.Desktop);
   Check ("frame: menu bar, toolbar, desktop, status bar exist",
     (BOOLEAN)(gRwFrame.MenuBar != NULL && gRwFrame.Toolbar != NULL && gRwFrame.Desktop != NULL && gRwFrame.StatusBar != NULL));
-  Check ("frame: 5 menus (File Access Specific Window Help)", (BOOLEAN)(RwMenuCount () == 5));
-  Check ("frame: 25 toolbar buttons", (BOOLEAN)(RwToolbarButtonCount () == 25));
+  Check ("frame: 6 menus (File Access Specific Tools Window Help)", (BOOLEAN)(RwMenuCount () == 6));
+  Check ("frame: 27 toolbar buttons", (BOOLEAN)(RwToolbarButtonCount () == 27));
+  lv_obj_update_layout (gRwFrame.Toolbar);
+  {
+    lv_area_t  Last;
+
+    ZeroMem (&Last, sizeof (Last));
+    lv_obj_get_coords (RwToolbarGetButton (RwCmdAbout), &Last);
+    Check ("frame: the toolbar fits in 800 pixels", (BOOLEAN)(Last.x2 < 800));
+  }
+
   Check ("frame: desktop fills the space between toolbar and status bar",
     (BOOLEAN)(DesktopW > 600 && DesktopH > 400 &&
               lv_obj_get_y (gRwFrame.StatusBar) + lv_obj_get_height (gRwFrame.StatusBar) == lv_display_get_vertical_resolution (NULL)));
@@ -221,11 +230,15 @@ RwSelfTestRun (
   Check ("keys: Right moves to the Access menu", (BOOLEAN)(RwMenuOpenIndex () == 1));
   Key (SCAN_LEFT, 0, 0);
   Key (SCAN_LEFT, 0, 0);
-  Check ("keys: Left wraps around to the Help menu", (BOOLEAN)(RwMenuOpenIndex () == 4));
+  Check ("keys: Left wraps around to the Help menu", (BOOLEAN)(RwMenuOpenIndex () == 5));
   Key (SCAN_ESC, 0, 0);
   Check ("keys: Esc closes the menu", (BOOLEAN)!RwMenuIsOpen ());
   Key (SCAN_NULL, L's', UEFI_GUI_KEY_MOD_ALT);
   Check ("keys: Alt+S opens the Specific menu", (BOOLEAN)(RwMenuOpenIndex () == 2));
+  Key (SCAN_NULL, L't', UEFI_GUI_KEY_MOD_ALT);
+  Check ("keys: Alt+T opens the Tools menu", (BOOLEAN)(RwMenuOpenIndex () == 3));
+  Key (SCAN_ESC, 0, 0);
+  Key (SCAN_NULL, L's', UEFI_GUI_KEY_MOD_ALT);
   Key (SCAN_DOWN, 0, 0);
   Key (SCAN_NULL, CHAR_CARRIAGE_RETURN, 0);
   Check ("keys: Down + Enter runs Specific > SMBIOS", (BOOLEAN)(!RwMenuIsOpen () && ActiveIs (RwCmdSmbios) && RwMdiCount () == 4));
@@ -275,6 +288,14 @@ RwSelfTestRun (
   // Phase 6 tools; their windows stay open for the screenshot.
   //
   RwSelfTestTools ();
+  Pump (100);
+  RwRunCommand (RwCmdCloseAll);
+  Pump (50);
+
+  //
+  // Phase 7 information tools; their windows stay open for the screenshot.
+  //
+  RwSelfTestInfo ();
   Pump (300);
   RwSerialLog ("UEFISHELLGUIRW: SCREEN READY\r\n");
   Pump (5000);

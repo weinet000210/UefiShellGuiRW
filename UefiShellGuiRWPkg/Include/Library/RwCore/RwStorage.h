@@ -4,7 +4,10 @@
   DEVICE) and EFI_NVM_EXPRESS_PASS_THRU_PROTOCOL (Identify Controller and
   Identify Namespace), and their decoders.
 
-  Only identify commands are sent; nothing is written to a drive.
+  Health data comes from read-only commands as well: ATA SMART READ DATA and
+  SMART READ THRESHOLDS (only when SMART is already enabled), and the NVMe
+  SMART / Health (02h), Error Information (01h) and Firmware Slot (03h) log
+  pages. Nothing is written to a drive and SMART is never enabled.
 
   Copyright (c) 2026, Niall Tseng. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -35,7 +38,23 @@ typedef struct {
   CHAR8      Model[48];       // model / product, trimmed
   CHAR8      Location[96];    // device path of the controller, shortened
   UINT64     Capacity;        // bytes (0 for ATAPI and controllers without TNVMCAP)
+  //
+  // Health data (ATA: SMART data + thresholds, 1024 bytes; NVMe controller:
+  // Health log, Firmware Slot log, then HealthErrors Error log entries).
+  //
+  EFI_STATUS    HealthStatus;  // EFI_UNSUPPORTED: no SMART / not enabled, EFI_NOT_FOUND: namespace
+  UINT8         *Health;
+  UINTN         HealthSize;
+  UINTN         HealthErrors;  // NVMe error log entries in Health
 } RW_STORAGE_DEV;
+
+#define RW_NVME_LOG_HEALTH     0      // offsets in RW_STORAGE_DEV.Health
+#define RW_NVME_LOG_FW_SLOT    512
+#define RW_NVME_LOG_ERRORS     1024
+#define RW_NVME_ERROR_ENTRY    64
+#define RW_NVME_ERRORS_MAX     16
+#define RW_ATA_SMART_DATA      0
+#define RW_ATA_SMART_THRESH    512
 
 typedef struct {
   RW_STORAGE_DEV    Devs[RW_STORAGE_MAX];
@@ -101,6 +120,23 @@ VOID
 RwStorageDecode (
   IN     CONST RW_STORAGE_DEV  *Dev,
   IN OUT RW_INFO               *Info
+  );
+
+/**
+  Decode the health data of Dev: SMART attributes with thresholds (ATA) or
+  the Health, Firmware Slot and Error log pages (NVMe controller), raw bytes
+  at the end. Explains when there is none.
+**/
+VOID
+RwStorageHealthDecode (
+  IN     CONST RW_STORAGE_DEV  *Dev,
+  IN OUT RW_INFO               *Info
+  );
+
+/** Name of an ATA SMART attribute ID, "" when unknown. **/
+CONST CHAR8 *
+RwAtaSmartAttrName (
+  IN UINT8  Id
   );
 
 /** The identify data of Dev as a read-only source. **/

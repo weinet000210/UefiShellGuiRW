@@ -8,7 +8,7 @@ The GUI runs on [LVGLUefiGuiPkg](https://github.com/weinet000210/LVGLUefiGuiPkg)
 [uefirrw](https://github.com/weinet000210/uefirrw) and moves into a
 UI-free library, RwCoreLib ([Docs/RwCoreLib.md](Docs/RwCoreLib.md)).
 
-![Main window in QEMU: menu bar, toolbar, MDI child windows, status bar](Docs/Images/mainframe-1024x768.png)
+![CPUID, calculator, UEFI System and UEFI Handles windows in QEMU](Docs/Images/phase7-info.png)
 
 ## ⚠️ Use at your own risk
 
@@ -31,7 +31,10 @@ and VS2022 and its tests pass in CI (QEMU + OVMF).
 | 4 | Decoders: PCIe tree with full device decode (capabilities, extended capabilities, link), ACPI tables + ASL, SMBIOS, USB tree + descriptors | Done |
 | 5 | Devices: Super I/O, EC, COM port; SMBus/SPD, ATA/NVMe identify, EDID, MSR per CPU | Done |
 | 6 | Tools: screenshot, dump all, register snapshots and compare, write log, file browser/editor | Done |
-| 7 | Real hardware validation, performance, v1.0 | Planned |
+| 7 | Information: CPUID, SMART / NVMe health logs, UEFI handle database, system table + GOP + TPM event log, calculator | Done |
+| 8 | Workflow: search, watch window and bookmarks, PCI register field hints, scripts | Planned |
+| 9 | Sensors and writes: hardware monitor, UEFI variables, clock generator | Planned |
+| 10 | Real hardware validation, performance, v1.0 | Planned |
 
 Write policy: ordinary registers are written when you finish typing the
 value; dangerous ones (CF9h reset, MSRs, BARs, bridge bus numbers,
@@ -45,7 +48,7 @@ FS0:\> UefiShellGuiRW.efi
 
 | Key | Action |
 |---|---|
-| `F10`, `Alt+F/A/S/W/H` | Open a menu; arrows move, `Enter` runs, `Esc` closes |
+| `F10`, `Alt+F/A/S/T/W/H` | Open a menu; arrows move, `Enter` runs, `Esc` closes |
 | `Ctrl+Tab` | Next child window |
 | `Ctrl+F4` | Close the active child window |
 | `Tab`, `Shift+Tab` | Next / previous pane in a child window |
@@ -59,7 +62,11 @@ early, `Esc` cancels), `Ctrl+B`/`Ctrl+W`/`Ctrl+D` byte / word / dword,
 `Ctrl+G` go to address, `Ctrl+R` auto refresh on/off. Values that changed
 since the last read are red; `--` is a byte that cannot be read. In lists
 and trees: arrows, `PgUp`/`PgDn`, `Home`/`End`, `Enter`; `Left`/`Right`
-collapse / expand tree nodes. Docs/Widgets.md has the details.
+collapse / expand tree nodes. Text wider than a list scrolls sideways
+with `Left`/`Right` (`Shift+Left`/`Shift+Right` in trees). In windows with
+two views `Ctrl+T` switches them (ACPI ASL, SMBus raw, drive health, handles
+by protocol); `Ctrl+Left`/`Ctrl+Right` switch the CPU in CPU MSR and CPUID.
+Docs/Widgets.md and Docs/Views.md have the details.
 
 Mouse: drag a window by its caption, resize from the bottom-right corner,
 double-click the caption to maximize, use the caption buttons to minimize,
@@ -71,8 +78,10 @@ package) first if the pointer is missing.
 `UEFISHELLGUIRW: PASS` or `FAIL`.
 
 `RwCoreTest.efi` checks the hardware library against a QEMU q35 machine
-(PCI, PCIe root port, memory/I/O/CMOS, MSR, SMBIOS, ACPI and the AML
-disassembler, USB, COM1) and prints `RWCORETEST: PASS` or `FAIL`:
+(PCI, PCIe root port, memory/I/O/CMOS, MSR and CPUID, SMBIOS, ACPI and the
+AML disassembler, USB, COM1, SMBus, ATA/NVMe, EDID, handles, GOP, TPM) and
+prints `RWCORETEST: PASS` or `FAIL`. The TPM checks need a TPM; CI attaches
+swtpm with `scripts/swtpm.sh`:
 
 ```sh
 UefiShellGuiRW/LVGLUefiGuiPkg/scripts/run-qemu.sh \

@@ -240,6 +240,9 @@ DumpStorage (
   } else {
     for (Index = 0; Index < List->Count; Index++) {
       RwStorageDecode (&List->Devs[Index], &Info);
+      if ((List->Devs[Index].Kind == RwStorAta) || (List->Devs[Index].Kind == RwStorNvmeCtrl)) {
+        RwStorageHealthDecode (&List->Devs[Index], &Info);
+      }
     }
 
     RwStorageFree (List);
@@ -348,6 +351,76 @@ DumpMsr (
   RwInfoFree (&Info);
 }
 
+STATIC
+VOID
+DumpCpuid (
+  IN OUT RW_STR   *Out,
+  IN     BOOLEAN  Crlf
+  )
+{
+  RW_CPUID_LIST  *List;
+  RW_INFO        Info;
+  UINTN          Cpu;
+  UINTN          Index;
+  EFI_STATUS     Status;
+
+  RwInfoInit (&Info);
+  List = AllocateZeroPool (sizeof (*List));
+  if (List == NULL) {
+    return;
+  }
+
+  for (Cpu = 0; Cpu < RwCpuCount (); Cpu++) {
+    Status = RwCpuidCollect (Cpu, List);
+    RwInfoSection (&Info, 0, "CPU %d%a", Cpu, (Cpu == RwCpuBsp ()) ? " (BSP)" : "");
+    if (EFI_ERROR (Status)) {
+      RwInfoText (&Info, 1, RwEmAlert, "CPUID not run: %r", Status);
+      continue;
+    }
+
+    RwCpuidDecode (List, &Info);
+    RwInfoSection (&Info, 0, "Leaves");
+    for (Index = 0; Index < List->Count; Index++) {
+      RwInfoText (
+        &Info,
+        1,
+        RwEmNormal,
+        "%08X.%-2X  %08X %08X %08X %08X  %a",
+        List->Entries[Index].Leaf,
+        List->Entries[Index].Sub,
+        List->Entries[Index].Eax,
+        List->Entries[Index].Ebx,
+        List->Entries[Index].Ecx,
+        List->Entries[Index].Edx,
+        RwCpuidLeafName (List->Entries[Index].Leaf)
+        );
+    }
+
+    AppendInfo (Out, &Info, Crlf);
+  }
+
+  FreePool (List);
+  RwInfoFree (&Info);
+}
+
+STATIC
+VOID
+DumpUefi (
+  IN OUT RW_STR   *Out,
+  IN     BOOLEAN  Crlf
+  )
+{
+  RW_INFO  Info;
+
+  RwInfoInit (&Info);
+  RwSystemDecode (&Info);
+  RwInfoSection (&Info, 0, "Handle database");
+  AppendInfo (Out, &Info, Crlf);
+  RwHandleDbDecode (FALSE, &Info, NULL, NULL);
+  AppendInfo (Out, &Info, Crlf);
+  RwInfoFree (&Info);
+}
+
 typedef struct {
   UINT32         Part;
   CONST CHAR8    *Name;
@@ -364,6 +437,8 @@ STATIC CONST DUMP_PART  mParts[] = {
   { RW_DUMP_STORAGE, "ATA / NVMe",      DumpStorage },
   { RW_DUMP_EDID,    "Monitor EDID",    DumpEdid    },
   { RW_DUMP_MSR,     "CPU MSR",         DumpMsr     },
+  { RW_DUMP_CPUID,   "CPUID",           DumpCpuid   },
+  { RW_DUMP_UEFI,    "UEFI",            DumpUefi    },
 };
 
 VOID

@@ -445,10 +445,17 @@ typedef struct {
   lv_obj_t           *Heading;
   RW_STORAGE_LIST    *List;
   INT32              Current;
+  BOOLEAN            ShowHealth;     ///< SMART / NVMe logs (TRUE) or identify data (FALSE)
 } RW_STORAGE_VIEW;
 
 RW_MDI_WINDOW   *RwViewOpenStorage (VOID);
 RW_STORAGE_VIEW *RwStorageViewGet (VOID);
+
+/** Right side: health (TRUE) or identify data (FALSE). **/
+VOID
+RwStorageViewSetHealth (
+  IN BOOLEAN  Health
+  );
 
 typedef struct {
   RW_MDI_WINDOW    *Window;
@@ -461,5 +468,56 @@ typedef struct {
 
 RW_MDI_WINDOW *RwViewOpenEdid (VOID);
 RW_EDID_VIEW  *RwEdidViewGet (VOID);
+
+//
+// ---- Phase 7: information tools --------------------------------------------
+//
+
+typedef struct {
+  RW_MDI_WINDOW    *Window;
+  RW_TABLE         *Leaves;
+  RW_PROPTABLE     *Decode;
+  lv_obj_t         *Heading;
+  RW_CPUID_LIST    *List;
+  UINTN            CpuIndex;
+  UINTN            CpuCount;
+  INT32            Current;          ///< entry index shown, -1 = none
+} RW_CPUID_VIEW;
+
+RW_MDI_WINDOW *RwViewOpenCpuid (VOID);
+RW_CPUID_VIEW *RwCpuidViewGet (VOID);
+
+/** Show the leaves of processor Cpu. **/
+VOID
+RwCpuidViewSetCpu (
+  IN UINTN  Cpu
+  );
+
+typedef struct {
+  RW_MDI_WINDOW    *Window;
+  RW_TREEVIEW      *Tree;
+  lv_obj_t         *Heading;
+  BOOLEAN          ByProtocol;
+  UINTN            Handles;
+  UINTN            Protocols;
+} RW_HANDLE_VIEW;
+
+RW_MDI_WINDOW  *RwViewOpenHandles (VOID);
+RW_HANDLE_VIEW *RwHandleViewGet (VOID);
+
+/** Rebuild the tree by handle or by protocol. **/
+VOID
+RwHandleViewSetMode (
+  IN BOOLEAN  ByProtocol
+  );
+
+typedef struct {
+  RW_MDI_WINDOW    *Window;
+  RW_PROPTABLE     *Decode;
+  lv_obj_t         *Heading;
+} RW_SYSTEM_VIEW;
+
+RW_MDI_WINDOW  *RwViewOpenSystem (VOID);
+RW_SYSTEM_VIEW *RwSystemViewGet (VOID);
 
 #endif

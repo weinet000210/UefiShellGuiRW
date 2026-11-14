@@ -66,7 +66,33 @@ is written to disk unless the user asks.
 | File Browser | `Tools/FileView.c` | Volumes / folder (name, size, date). `Enter` opens a folder or a file, `Backspace` goes up. |
 | Text / Hex Editor | `Tools/FileEdit.c` | Text files up to 64 KB (ASCII / UTF-8, UCS-2 with BOM; CRLF kept) in a text editor, anything else up to 16 MB in a hex grid. Edits stay in memory; `Ctrl+S` asks, then replaces the file; closing a changed file asks. No delete or rename. |
 
+## Phase 7
+
+Information tools. Everything here only reads: CPUID, SMART / log-page
+reads, the handle database, the system table, GOP queries and TPM2_PCR_Read.
+
+| Window | File | Content |
+|---|---|---|
+| CPUID (Specific) | `Views/CpuidView.c` | Every standard, hypervisor and extended leaf with its subleaves (raw EAX..EDX) / the selected leaf decoded (fields, named feature bits) above the processor summary: vendor, brand, signature, features by group, XSAVE, caches (leaf 4 or 8000001Dh), topology (1Fh or 0Bh), address sizes. `Ctrl+Left` / `Ctrl+Right` switch the processor (MP services) and keep the leaf. |
+| ATA / NVMe Identify (extended) | `Views/StorageView.c` | `Ctrl+T` switches the right side between identify data and health: ATA SMART attributes with thresholds (only when SMART is already enabled; it is never enabled), self-test status; NVMe Health log (critical warnings, temperature, spare, usage, data units, hours, errors), Firmware Slot log and Error log entries. |
+| UEFI Handles (Specific) | `Views/HandleView.c` | Tree of every handle with a short description (driver name, image file or device path) / its protocols with details (device path text, image base and size, GOP mode) / who opened each protocol (attributes, controller, driver). `Ctrl+T` lists by protocol; `Enter` on a handle there jumps to it. GUID names come from edk2's DEC files (`scripts/gen-guids.py` generates `RwGuidNames.c`). |
+| UEFI System (Specific) | `Views/SystemView.c` | System table (vendor, revisions, services), configuration tables, every GOP with its current mode, frame buffer and mode list, TPM 2.0 (manufacturer, active banks, PCR values of every bank, TCG2 event log with digests and event data). `Enter` on a configuration table or frame buffer opens the Memory window there. |
+| Calculator (Tools) | `Tools/CalcView.c` | 64-bit expressions: hex by default, `31n` decimal, `0y101` binary, `+ - * / % & \| ^ ~ !  << >>` and parentheses. Evaluates while typing; `Enter` keeps the value. Hex, unsigned and signed decimal, octal, binary, ASCII, and the 64 bits as boxes to toggle. |
+
+The Tools menu (`Alt+T`) holds Calculator, Write Log and File Browser.
+Dump All adds CPUID of every CPU, drive health, the system table, GOP,
+TPM and the handle database.
+
 ## Tests
+
+`SelfTestInfo.c`: CPUID leaves and decode, `Ctrl+Right` to the AP keeping
+the leaf, SMART attributes and the NVMe Health log through `Ctrl+T`, the
+handle tree by handle and by protocol with the `Enter` jump, the system
+table, GOP modes, TPM rows and `Enter` on the frame buffer, and the
+calculator driven by typing, `Enter` and a bit toggle. RwCoreTest checks
+CPUID on both CPUs, ATA SMART and the NVMe logs, the handle database, the
+system table, the GOP frame buffer, TPM PCRs and event log (the CI machine
+has swtpm), the calculator parser and the new dump parts.
 
 `SelfTestTools.c`: snapshot on a buffer the test allocated (a change stays
 red, cleared, loaded back by number), the write log entry of a grid write,

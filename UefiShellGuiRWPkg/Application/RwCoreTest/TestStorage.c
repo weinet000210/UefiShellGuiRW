@@ -52,6 +52,14 @@ TestStorage (
     RwStorageDecode (&List->Devs[Ata], &Info);
     CHECK (Info.Count > 15, "ATA identify decodes");
     RwInfoFree (&Info);
+    D = &List->Devs[Ata];
+    TestLog ("    ATA SMART: %r, %d bytes", D->HealthStatus, D->HealthSize);
+    CHECK (!EFI_ERROR (D->HealthStatus) && (D->HealthSize == 1024), "ATA SMART READ DATA and THRESHOLDS");
+    RwInfoInit (&Info);
+    RwStorageHealthDecode (D, &Info);
+    CHECK ((Info.Count > 10) && (Info.Rows[0].Kind == RwKindSection) && (AsciiStrStr (Info.Rows[0].Name, "SMART attributes") != NULL), "ATA SMART attributes decode");
+    CHECK (AsciiStrCmp (RwAtaSmartAttrName (194), "Temperature") == 0, "SMART attribute names");
+    RwInfoFree (&Info);
   }
 
   CHECK (Ctrl >= 0, "NVMe Identify Controller");
@@ -63,9 +71,32 @@ TestStorage (
     RwStorageDecode (&List->Devs[Ctrl], &Info);
     CHECK (Info.Count > 15, "NVMe controller decodes");
     RwInfoFree (&Info);
+    D = &List->Devs[Ctrl];
+    TestLog ("    NVMe logs: %r, %d bytes, %d error entries", D->HealthStatus, D->HealthSize, D->HealthErrors);
+    CHECK (!EFI_ERROR (D->HealthStatus) && (D->HealthSize >= 1024), "NVMe Health, Firmware Slot and Error logs");
+    CHECK ((D->Health != NULL) && ((D->Health[1] | (D->Health[2] << 8)) > 273), "NVMe composite temperature");
+    RwInfoInit (&Info);
+    RwStorageHealthDecode (D, &Info);
+    CHECK ((Info.Count > 15) && (AsciiStrStr (Info.Rows[0].Name, "Health") != NULL), "NVMe health decodes");
+    RwInfoFree (&Info);
   }
 
   CHECK ((Ns >= 0) && (List->Devs[Ns].Parent == Ctrl) && (List->Devs[Ns].Capacity == SIZE_64MB), "NVMe namespace 1 is 64 MiB");
+  CHECK ((Ns >= 0) && (List->Devs[Ns].HealthStatus == EFI_NOT_FOUND), "NVMe namespace points to the controller for health");
+  RwStorageFree (List);
+
+  //
+  // A second scan right after the SMART reads still finds the ATA drive.
+  //
+  Status = RwStorageScan (List);
+  Ata    = -1;
+  for (Index = 0; Index < List->Count; Index++) {
+    if (List->Devs[Index].Kind == RwStorAta) {
+      Ata = (INTN)Index;
+    }
+  }
+
+  CHECK (!EFI_ERROR (Status) && (Ata >= 0) && (List->Devs[Ata].Health != NULL), "second scan finds the ATA drive and its SMART data");
   RwStorageFree (List);
   FreePool (List);
 }
