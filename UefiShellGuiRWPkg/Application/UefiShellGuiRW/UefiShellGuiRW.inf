@@ -12,7 +12,7 @@
   BASE_NAME                      = UefiShellGuiRW
   FILE_GUID                      = 6B1E7C3A-52D4-4F0E-9C61-3A8D2F5B7E10
   MODULE_TYPE                    = UEFI_APPLICATION
-  VERSION_STRING                 = 0.0.1
+  VERSION_STRING                 = 0.0.6
   ENTRY_POINT                    = UefiShellGuiRWMain
 
 [Sources]
@@ -61,6 +61,13 @@
   SelfTestViews.c
   SelfTestDecoders.c
   SelfTestDevices.c
+  SelfTestTools.c
+  Tools/Tools.h
+  Tools/File.c
+  Tools/Tools.c
+  Tools/WriteLogView.c
+  Tools/FileView.c
+  Tools/FileEdit.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -80,11 +87,19 @@
   LvglLib
   UefiGuiLib
   UefiGuiRuntimeLib
+  UefiGuiDisplayLib
+  UefiRuntimeServicesTableLib
+  DevicePathLib
   RwCoreLib
 
 [Protocols]
   gEfiLoadedImageProtocolGuid              ## CONSUMES
   gEfiSerialIoProtocolGuid                 ## SOMETIMES_CONSUMES
+  gEfiSimpleFileSystemProtocolGuid         ## SOMETIMES_CONSUMES
+
+[Guids]
+  gEfiFileInfoGuid                         ## SOMETIMES_CONSUMES
+  gEfiFileSystemInfoGuid                   ## SOMETIMES_CONSUMES
 
 [BuildOptions]
   # -ffreestanding: LVGL headers include <stdint.h>; use the compiler's own.

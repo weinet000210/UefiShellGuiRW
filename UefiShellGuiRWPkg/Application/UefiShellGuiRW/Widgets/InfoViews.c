@@ -366,8 +366,9 @@ RwTreeViewSetInfo (
   IN UINTN        ExpandLevels
   )
 {
-  UINTN  Index;
-  UINTN  Count;
+  UINTN   Index;
+  UINTN   Count;
+  RW_STR  Str;
 
   TreeFreeData (Tree);
   Tree->Info = *Info;
@@ -386,6 +387,18 @@ RwTreeViewSetInfo (
     Tree->HasChildren[Index] = (BOOLEAN)((Index + 1 < Tree->Info.Count) &&
                                          (Tree->Info.Rows[Index + 1].Level > Tree->Info.Rows[Index].Level));
     Tree->Expanded[Index] = (BOOLEAN)(Tree->Info.Rows[Index].Level < ExpandLevels);
+  }
+
+  RwVListResetWidth (Tree->List);
+  for (Index = 0; Index < Tree->Info.Count; Index++) {
+    RwStrInit (&Str);
+    RowText (&Tree->Info.Rows[Index], &Str);
+    RwVListFitWidth (
+      Tree->List,
+      4 + (INT32)Tree->Info.Rows[Index].Level * TREE_INDENT + TREE_BOX + 6 + 8 +
+      RwTextWidth ((Tree->Info.Rows[Index].Kind == RwKindText) ? RwMonoFont () : Tree->List->Font, Str.Buf)
+      );
+    RwStrFree (&Str);
   }
 
   Tree->List->Selected = RW_VLIST_NONE;
@@ -655,10 +668,30 @@ RwPropTableSetInfo (
   IN RW_INFO       *Info
   )
 {
+  UINTN              Index;
+  CONST RW_INFO_ROW  *R;
+  RW_STR             Str;
+  INT32              Width;
+
   RwInfoFree (&Table->Info);
   Table->Info = *Info;
   ZeroMem (Info, sizeof (*Info));
   Table->List->Selected = RW_VLIST_NONE;
+  RwVListResetWidth (Table->List);
+  for (Index = 0; Index < Table->Info.Count; Index++) {
+    R = &Table->Info.Rows[Index];
+    if (R->Kind == RwKindField) {
+      RwVListFitCell (Table->List, 0, (INT32)(R->Level > 0 ? R->Level - 1 : 0) * PROP_INDENT + RwTextWidth (Table->List->Font, R->Name));
+      RwVListFitCell (Table->List, Table->ShowOffset ? 2 : 1, RwTextWidth (RwMonoFont (), R->Value));
+    } else {
+      RwStrInit (&Str);
+      RowText (R, &Str);
+      Width = 4 + (INT32)R->Level * PROP_INDENT + RwTextWidth ((R->Kind == RwKindSection) ? Table->List->Font : RwMonoFont (), Str.Buf);
+      RwStrFree (&Str);
+      RwVListFitWidth (Table->List, Width + 12);
+    }
+  }
+
   RwVListSetRowCount (Table->List, Table->Info.Count);
   lv_obj_scroll_to_y (Table->List->Body, 0, LV_ANIM_OFF);
   RwVListInvalidate (Table->List);
@@ -848,7 +881,26 @@ RwTableClear (
 {
   TableFreeRows (Table);
   Table->List->Selected = RW_VLIST_NONE;
+  RwVListResetWidth (Table->List);
   RwVListSetRowCount (Table->List, 0);
+}
+
+/**
+  A fixed column widens to its longest text; long text in the last column
+  (the one that takes the rest) scrolls into view.
+**/
+STATIC
+VOID
+TableFitRow (
+  IN RW_TABLE  *Table,
+  IN CHAR8     **Cells
+  )
+{
+  UINTN  Column;
+
+  for (Column = 0; Column < Table->List->ColumnCount; Column++) {
+    RwVListFitCell (Table->List, Column, RwTextWidth (Table->Mono ? RwMonoFont () : Table->List->Font, Cells[Column]));
+  }
 }
 
 STATIC
@@ -916,6 +968,7 @@ RwTableAddRow (
     return EFI_OUT_OF_RESOURCES;
   }
 
+  TableFitRow (Table, Block);
   Table->Rows[Table->Count].Cells    = Block;
   Table->Rows[Table->Count].Tag      = Tag;
   Table->Rows[Table->Count].Emphasis = Emphasis;
@@ -943,6 +996,7 @@ RwTableSetRow (
     return EFI_OUT_OF_RESOURCES;
   }
 
+  TableFitRow (Table, Block);
   FreePool (Table->Rows[Row].Cells);
   Table->Rows[Row].Cells    = Block;
   Table->Rows[Row].Emphasis = Emphasis;
@@ -1181,4 +1235,110 @@ RwTextViewLineCount (
   )
 {
   return View->LineCount;
+}
+
+//
+// ---- Text of a widget (File > Save Window) -------------------------------------
+//
+
+CONST RW_INFO *
+RwTreeViewGetInfo (
+  IN RW_TREEVIEW  *Tree
+  )
+{
+  return &Tree->Info;
+}
+
+CONST CHAR8 *
+RwTextViewGetText (
+  IN RW_TEXTVIEW  *View
+  )
+{
+  return (View->Text != NULL) ? View->Text : "";
+}
+
+STATIC
+VOID
+TableToText (
+  IN     RW_TABLE  *Table,
+  IN OUT RW_STR    *Out,
+  IN     BOOLEAN   Crlf
+  )
+{
+  UINTN        Widths[RW_VLIST_MAX_COLUMNS];
+  UINTN        Columns;
+  UINTN        Column;
+  UINTN        Row;
+  CONST CHAR8  *Cell;
+
+  Columns = MAX (Table->List->ColumnCount, 1);
+  for (Column = 0; Column < Columns; Column++) {
+    Widths[Column] = (Table->List->ColumnCount > 0) ? AsciiStrLen (Table->List->Columns[Column].Title) : 0;
+    for (Row = 0; Row < Table->Count; Row++) {
+      Widths[Column] = MAX (Widths[Column], AsciiStrLen (Table->Rows[Row].Cells[Column]));
+    }
+  }
+
+  for (Row = 0; Row <= Table->Count; Row++) {
+    if ((Row == 0) && (Table->List->ColumnCount == 0)) {
+      continue;
+    }
+
+    for (Column = 0; Column < Columns; Column++) {
+      Cell = (Row == 0) ? Table->List->Columns[Column].Title : Table->Rows[Row - 1].Cells[Column];
+      if (Column + 1 < Columns) {
+        RwStrAppendF (Out, "%-*a  ", Widths[Column], Cell);
+      } else {
+        RwStrAppend (Out, Cell);
+      }
+    }
+
+    RwStrAppend (Out, Crlf ? "\r\n" : "\n");
+  }
+}
+
+BOOLEAN
+RwWidgetToText (
+  IN     RW_WIDGET  *Widget,
+  IN OUT RW_STR     *Out,
+  IN     BOOLEAN    Crlf
+  )
+{
+  RW_VLIST     *List;
+  CONST CHAR8  *Text;
+  CONST CHAR8  *P;
+
+  if ((Widget == NULL) || (Widget->Kind == NULL)) {
+    return FALSE;
+  }
+
+  List = (RW_VLIST *)Widget;
+  if (AsciiStrCmp (Widget->Kind, "TreeView") == 0) {
+    RwInfoToText (&((RW_TREEVIEW *)List->Owner)->Info, Out, Crlf);
+  } else if (AsciiStrCmp (Widget->Kind, "PropTable") == 0) {
+    RwInfoToText (&((RW_PROPTABLE *)List->Owner)->Info, Out, Crlf);
+  } else if (AsciiStrCmp (Widget->Kind, "Table") == 0) {
+    TableToText ((RW_TABLE *)List->Owner, Out, Crlf);
+  } else if (AsciiStrCmp (Widget->Kind, "TextView") == 0) {
+    Text = RwTextViewGetText ((RW_TEXTVIEW *)List->Owner);
+    for (P = Text; *P != '\0'; P++) {
+      if (*P == '\r') {
+        continue;
+      }
+
+      if ((*P == '\n') && Crlf) {
+        RwStrAppendChar (Out, '\r');
+      }
+
+      RwStrAppendChar (Out, *P);
+    }
+
+    if ((P > Text) && (P[-1] != '\n')) {
+      RwStrAppend (Out, Crlf ? "\r\n" : "\n");
+    }
+  } else {
+    return FALSE;
+  }
+
+  return TRUE;
 }

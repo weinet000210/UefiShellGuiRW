@@ -119,7 +119,7 @@ RwSelfTestRun (
   Check ("frame: menu bar, toolbar, desktop, status bar exist",
     (BOOLEAN)(gRwFrame.MenuBar != NULL && gRwFrame.Toolbar != NULL && gRwFrame.Desktop != NULL && gRwFrame.StatusBar != NULL));
   Check ("frame: 5 menus (File Access Specific Window Help)", (BOOLEAN)(RwMenuCount () == 5));
-  Check ("frame: 22 toolbar buttons", (BOOLEAN)(RwToolbarButtonCount () == 22));
+  Check ("frame: 25 toolbar buttons", (BOOLEAN)(RwToolbarButtonCount () == 25));
   Check ("frame: desktop fills the space between toolbar and status bar",
     (BOOLEAN)(DesktopW > 600 && DesktopH > 400 &&
               lv_obj_get_y (gRwFrame.StatusBar) + lv_obj_get_height (gRwFrame.StatusBar) == lv_display_get_vertical_resolution (NULL)));
@@ -236,7 +236,7 @@ RwSelfTestRun (
   Check ("keys: Window menu lists the windows; End + Enter activates the last one", ActiveIs (RwCmdSmbios));
   Key (SCAN_NULL, L'f', UEFI_GUI_KEY_MOD_ALT);
   Key (SCAN_DOWN, 0, 0);
-  Check ("menu: disabled File entries are skipped (Down lands on Exit)", (BOOLEAN)(RwMenuOpenIndex () == 0));
+  Check ("menu: Down moves inside the File menu", (BOOLEAN)(RwMenuOpenIndex () == 0));
   Key (SCAN_ESC, 0, 0);
   Key (SCAN_F1, 0, 0);
   Check ("keys: F1 opens About", (BOOLEAN)(ActiveIs (RwCmdAbout) && RwMdiCount () == 5));
@@ -258,8 +258,8 @@ RwSelfTestRun (
   Pump (50);
 
   //
-  // Phase 3 raw-space windows, Phase 4 decoder windows, then the Phase 5
-  // device windows, which stay open (cascaded) for the screenshot.
+  // Phase 3 raw-space windows, Phase 4 decoder windows, Phase 5 device
+  // windows, then the Phase 6 tools.
   //
   RwSelfTestViews ();
   RwRunCommand (RwCmdCloseAll);
@@ -268,6 +268,13 @@ RwSelfTestRun (
   RwRunCommand (RwCmdCloseAll);
   Pump (50);
   RwSelfTestDevices ();
+  RwRunCommand (RwCmdCloseAll);
+  Pump (50);
+
+  //
+  // Phase 6 tools; their windows stay open for the screenshot.
+  //
+  RwSelfTestTools ();
   Pump (300);
   RwSerialLog ("UEFISHELLGUIRW: SCREEN READY\r\n");
   Pump (5000);

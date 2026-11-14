@@ -128,17 +128,26 @@ RwSmbusEnable (
   IN OUT RW_SMBUS  *Bus
   )
 {
+  UINT32      Old;
+  EFI_STATUS  Status;
+  CHAR8       Space[40];
+
   if ((Bus->Pci.RootBridge == NULL) || (Bus->Base == 0)) {
     return EFI_NOT_READY;
   }
 
+  AsciiSPrint (Space, sizeof (Space), "PCI %02X:%02X.%X SMBus host", Bus->Bus, Bus->Dev, Bus->Func);
   if (!Bus->IoDecode) {
-    RwPciCfgWrite (&Bus->Pci, 0x04, 2, RwPciRd (&Bus->Pci, 0x04, 2) | BIT0);
+    Old    = RwPciRd (&Bus->Pci, 0x04, 2);
+    Status = RwPciCfgWrite (&Bus->Pci, 0x04, 2, Old | BIT0);
+    RwWlogAdd (Space, 0x04, 2, TRUE, Old, Old | BIT0, Status);
     Bus->IoDecode = (BOOLEAN)((RwPciRd (&Bus->Pci, 0x04, 2) & BIT0) != 0);
   }
 
   if ((Bus->Kind == RW_SMBUS_INTEL) && !Bus->HostEnabled) {
-    RwPciCfgWrite (&Bus->Pci, 0x40, 1, RwPciRd (&Bus->Pci, 0x40, 1) | BIT0);
+    Old    = RwPciRd (&Bus->Pci, 0x40, 1);
+    Status = RwPciCfgWrite (&Bus->Pci, 0x40, 1, Old | BIT0);
+    RwWlogAdd (Space, 0x40, 1, TRUE, Old, Old | BIT0, Status);
     Bus->HostEnabled = (BOOLEAN)((RwPciRd (&Bus->Pci, 0x40, 1) & BIT0) != 0);
   }
 

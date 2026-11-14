@@ -23,5 +23,6 @@
 #include <Library/RwCore/RwSmbus.h>
 #include <Library/RwCore/RwStorage.h>
 #include <Library/RwCore/RwEdid.h>
+#include <Library/RwCore/RwTools.h>
 
 #endif

@@ -6,13 +6,16 @@
 **/
 
 #include "../UefiShellGuiRW.h"
-#include "../Views/Views.h"
+#include "../Tools/Tools.h"
 
 STATIC CONST RW_COMMAND  mCommands[] = {
   { RwCmdNone,       "",                          NULL,       NULL,             NULL      },
   { RwCmdRefresh,    "Refresh",                   "F5",       &gIconRefresh,    NULL      },
-  { RwCmdScreenshot, "Save Screenshot",           "F12",      &gIconScreenshot, "Phase 6" },
-  { RwCmdDumpAll,    "Dump All to File",          NULL,       &gIconDumpAll,    "Phase 6" },
+  { RwCmdScreenshot, "Save Screenshot",           "F12",      &gIconScreenshot, NULL      },
+  { RwCmdSaveWindow, "Save Window to File",       "Ctrl+S",   NULL,             NULL      },
+  { RwCmdDumpAll,    "Dump All to File",          NULL,       &gIconDumpAll,    NULL      },
+  { RwCmdWriteLog,   "Write Log",                 NULL,       &gIconWriteLog,   NULL      },
+  { RwCmdFiles,      "File Browser",              NULL,       &gIconFiles,      NULL      },
   { RwCmdExit,       "Exit",                      "Alt+X",    &gIconExit,       NULL      },
   { RwCmdPci,        "PCI Devices",               NULL,       &gIconPci,        NULL      },
   { RwCmdMemory,     "Memory",                    NULL,       &gIconMemory,     NULL      },
@@ -35,6 +38,7 @@ STATIC CONST RW_COMMAND  mCommands[] = {
   { RwCmdTileV,      "Tile Vertically",           NULL,       &gIconTileV,      NULL      },
   { RwCmdCloseAll,   "Close All",                 NULL,       NULL,             NULL      },
   { RwCmdAbout,      "About UefiShellGuiRW",      "F1",       &gIconAbout,      NULL      },
+  { RwCmdFileEdit,   "File Editor",               NULL,       &gIconFiles,      NULL      },
 };
 
 CONST RW_COMMAND *
@@ -63,9 +67,10 @@ RwIsCommandEnabled (
   switch (Id) {
     case RwCmdRefresh:
       return (BOOLEAN)((RwMdiGetActive () != NULL) && (RwMdiGetActive ()->OnRefresh != NULL));
-    case RwCmdScreenshot:
-    case RwCmdDumpAll:
-      return FALSE;
+    case RwCmdSaveWindow:
+      return (BOOLEAN)(RwMdiGetActive () != NULL);
+    case RwCmdFileEdit:
+      return FALSE;      // opened from the file browser
     case RwCmdCascade:
     case RwCmdTileH:
     case RwCmdTileV:
@@ -73,6 +78,19 @@ RwIsCommandEnabled (
       return (BOOLEAN)(RwMdiCount () > 0);
     default:
       return TRUE;
+  }
+}
+
+STATIC
+VOID
+ExitDone (
+  IN BOOLEAN  Accepted,
+  IN UINT64   Value,
+  IN VOID     *Context
+  )
+{
+  if (Accepted) {
+    RwRequestExit ();
   }
 }
 
@@ -89,7 +107,27 @@ RwRunCommand (
 
   switch (Id) {
     case RwCmdExit:
-      RwRequestExit ();
+      if (RwFileEditDirtyCount () > 0) {
+        RwDialogConfirm (
+          "Exit",
+          "A file editor has unsaved changes.\nExit and discard them?",
+          RW_DIALOG_WARNING,
+          ExitDone,
+          NULL
+          );
+      } else {
+        RwRequestExit ();
+      }
+
+      break;
+    case RwCmdScreenshot:
+      RwToolScreenshot ();
+      break;
+    case RwCmdSaveWindow:
+      RwToolSaveWindow (RwMdiGetActive ());
+      break;
+    case RwCmdDumpAll:
+      RwToolDumpAll ();
       break;
     case RwCmdRefresh:
       Window = RwMdiGetActive ();
@@ -171,6 +209,12 @@ RwRunCommand (
             break;
           case RwCmdComPort:
             RwViewOpenCom ();
+            break;
+          case RwCmdWriteLog:
+            RwViewOpenWriteLog ();
+            break;
+          case RwCmdFiles:
+            RwViewOpenFiles ();
             break;
           default:
             RwViewOpenPlaceholder (Id);

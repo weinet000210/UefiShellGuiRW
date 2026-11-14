@@ -27,6 +27,10 @@ struct _RW_HEXGRID {
   BOOLEAN                 InRange[RW_HEXGRID_PAGE];
   BOOLEAN                 Changed[RW_HEXGRID_PAGE];
   BOOLEAN                 HavePrev;
+  BOOLEAN                 HaveSnap;                 ///< compare against a snapshot instead of the previous read
+  UINT64                  SnapPage;
+  UINT8                   Snap[RW_HEXGRID_PAGE];
+  BOOLEAN                 SnapValid[RW_HEXGRID_PAGE];
   BOOLEAN                 Editing;
   UINTN                   EditDigits;
   UINT64                  EditValue;
@@ -175,6 +179,32 @@ NotifyCursor (
 }
 
 /**
+  Mark the bytes that differ: from the snapshot when one is shown for this
+  page, else from the previous read (FromRead FALSE: there is none, so
+  nothing is marked).
+**/
+STATIC
+VOID
+UpdateChanged (
+  IN RW_HEXGRID  *Grid,
+  IN BOOLEAN     FromRead
+  )
+{
+  UINTN  Offset;
+
+  for (Offset = 0; Offset < RW_HEXGRID_PAGE; Offset++) {
+    if (Grid->HaveSnap && (Grid->SnapPage == Grid->Page)) {
+      Grid->Changed[Offset] = (BOOLEAN)(Grid->Valid[Offset] && Grid->SnapValid[Offset] && (Grid->Data[Offset] != Grid->Snap[Offset]));
+    } else if (FromRead) {
+      Grid->Changed[Offset] = (BOOLEAN)(Grid->Valid[Offset] && Grid->PrevValid[Offset] &&
+                                        (Grid->Data[Offset] != Grid->Prev[Offset]));
+    } else {
+      Grid->Changed[Offset] = FALSE;
+    }
+  }
+}
+
+/**
   Read the page in the view width (registers often care about the access
   width); a cell the source cannot read in that width is read byte by byte.
 **/
@@ -239,11 +269,7 @@ ReadPage (
     }
   }
 
-  for (Offset = 0; Offset < RW_HEXGRID_PAGE; Offset++) {
-    Grid->Changed[Offset] = (BOOLEAN)(Grid->HavePrev && Grid->Valid[Offset] && Grid->PrevValid[Offset] &&
-                                      (Grid->Data[Offset] != Grid->Prev[Offset]));
-  }
-
+  UpdateChanged (Grid, Grid->HavePrev);
   Grid->HavePrev = TRUE;
 }
 
@@ -890,6 +916,18 @@ OnKey (
     return TRUE;
   }
 
+  if (RwKeyIsCtrl (Key, L'N')) {
+    EndEdit (Grid, FALSE);
+    RwToolSnapshotToggle (Grid);
+    return TRUE;
+  }
+
+  if (RwKeyIsCtrl (Key, L'L')) {
+    EndEdit (Grid, FALSE);
+    RwToolSnapshotLoad (Grid);
+    return TRUE;
+  }
+
   if (RwKeyIsCtrl (Key, L'R')) {
     RwHexGridSetAutoRefresh (Grid, (BOOLEAN)!Grid->AutoRefresh, 0);
     RwStatusSetText (Grid->AutoRefresh ? "Auto refresh on" : "Auto refresh off");
@@ -1044,8 +1082,9 @@ RwHexGridSetSource (
   )
 {
   EndEdit (Grid, FALSE);
-  Grid->Source = Source;
-  Grid->Cursor = 0;
+  Grid->Source   = Source;
+  Grid->Cursor   = 0;
+  Grid->HaveSnap = FALSE;
   Grid->Page   = (Source != NULL) ? (Source->Base & ~(UINT64)(RW_HEXGRID_PAGE - 1)) : 0;
   if ((Source != NULL) &&
       ((Source->WidthMask & ((Grid->Width == 1) ? RW_DS_WIDTH_8 : (Grid->Width == 2) ? RW_DS_WIDTH_16 : RW_DS_WIDTH_32)) == 0))
@@ -1173,4 +1212,62 @@ RwHexGridIsEditing (
   )
 {
   return Grid->Editing;
+}
+
+RW_DATA_SOURCE *
+RwHexGridGetSource (
+  IN RW_HEXGRID  *Grid
+  )
+{
+  return Grid->Source;
+}
+
+VOID
+RwHexGridGetData (
+  IN  RW_HEXGRID  *Grid,
+  OUT UINT8       *Data,
+  OUT BOOLEAN     *Valid
+  )
+{
+  CopyMem (Data, Grid->Data, RW_HEXGRID_PAGE);
+  CopyMem (Valid, Grid->Valid, RW_HEXGRID_PAGE * sizeof (BOOLEAN));
+}
+
+VOID
+RwHexGridSetSnapshot (
+  IN RW_HEXGRID     *Grid,
+  IN UINT64         Page,
+  IN CONST UINT8    *Data,
+  IN CONST BOOLEAN  *Valid
+  )
+{
+  Grid->HaveSnap = TRUE;
+  Grid->SnapPage = Page & ~(UINT64)(RW_HEXGRID_PAGE - 1);
+  CopyMem (Grid->Snap, Data, RW_HEXGRID_PAGE);
+  CopyMem (Grid->SnapValid, Valid, RW_HEXGRID_PAGE * sizeof (BOOLEAN));
+  UpdateChanged (Grid, FALSE);
+  lv_obj_invalidate (Grid->Base.Obj);
+}
+
+VOID
+RwHexGridClearSnapshot (
+  IN RW_HEXGRID  *Grid
+  )
+{
+  Grid->HaveSnap = FALSE;
+  UpdateChanged (Grid, FALSE);
+  lv_obj_invalidate (Grid->Base.Obj);
+}
+
+BOOLEAN
+RwHexGridHasSnapshot (
+  IN  RW_HEXGRID  *Grid,
+  OUT UINT64      *Page  OPTIONAL
+  )
+{
+  if (Page != NULL) {
+    *Page = Grid->SnapPage;
+  }
+
+  return Grid->HaveSnap;
 }

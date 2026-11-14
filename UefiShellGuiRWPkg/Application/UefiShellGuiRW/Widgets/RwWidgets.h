@@ -105,6 +105,12 @@ RwFocusSet (
   IN RW_WIDGET  *Widget
   );
 
+/** TRUE when the widget or one of its parents is hidden. **/
+BOOLEAN
+RwWidgetIsHidden (
+  IN RW_WIDGET  *Widget
+  );
+
 RW_WIDGET *
 RwFocusGet (
   IN RW_MDI_WINDOW  *Window
@@ -240,7 +246,7 @@ RwDialogGetText (
 //
 // Keys: arrows, Home/End (row), Ctrl+Home/Ctrl+End (page), PgUp/PgDn (page),
 // Ctrl+B / Ctrl+W / Ctrl+D byte / word / dword, Ctrl+G go to address,
-// Ctrl+R auto refresh on/off.
+// Ctrl+R auto refresh on/off, Ctrl+N snapshot on/off, Ctrl+L load snapshot.
 //
 typedef struct _RW_HEXGRID RW_HEXGRID;
 
@@ -380,6 +386,56 @@ RwHexGridIsEditing (
   IN RW_HEXGRID  *Grid
   );
 
+RW_DATA_SOURCE *
+RwHexGridGetSource (
+  IN RW_HEXGRID  *Grid
+  );
+
+/** The page as last read: RW_HEXGRID_PAGE bytes and validity flags. **/
+VOID
+RwHexGridGetData (
+  IN  RW_HEXGRID  *Grid,
+  OUT UINT8       *Data,
+  OUT BOOLEAN     *Valid
+  );
+
+/**
+  Compare the page at Page against Data from now on: bytes that differ are
+  red until the snapshot is cleared (other pages compare as before).
+**/
+VOID
+RwHexGridSetSnapshot (
+  IN RW_HEXGRID     *Grid,
+  IN UINT64         Page,
+  IN CONST UINT8    *Data,
+  IN CONST BOOLEAN  *Valid
+  );
+
+VOID
+RwHexGridClearSnapshot (
+  IN RW_HEXGRID  *Grid
+  );
+
+BOOLEAN
+RwHexGridHasSnapshot (
+  IN  RW_HEXGRID  *Grid,
+  OUT UINT64      *Page  OPTIONAL
+  );
+
+/**
+  Ctrl+N / Ctrl+L of the grid (Tools/Tools.c): take or clear a snapshot of
+  the page, load one from a SNAPnnnn.BIN file.
+**/
+VOID
+RwToolSnapshotToggle (
+  IN RW_HEXGRID  *Grid
+  );
+
+VOID
+RwToolSnapshotLoad (
+  IN RW_HEXGRID  *Grid
+  );
+
 /**
   Page offset of the hex or ASCII cell under a point (screen coordinates),
   or -1.
@@ -454,7 +510,8 @@ RwBitFieldGetCursor (
 //
 // The engine under the tree view, property table, table and text view:
 // fixed-height rows drawn on demand, so a list of 100 000 rows costs as
-// much as one screenful. Optional column header. Keyboard selection,
+// much as one screenful. Text wider than the list scrolls sideways: Left /
+// Right (Shift+Left / Shift+Right in a tree), the scroll bar or dragging. Optional column header. Keyboard selection,
 // click to select, double-click / Enter to activate.
 //
 typedef struct _RW_VLIST RW_VLIST;
@@ -510,6 +567,8 @@ struct _RW_VLIST {
   VOID               *Owner;      ///< the tree / table that uses the list
   VOID               (*OwnerFree)(VOID *Owner);
   INT32              ClickX;      ///< x of the last click, relative to the row
+  INT32              BaseWidth[RW_VLIST_MAX_COLUMNS];  ///< column widths as set
+  INT32              LastTextWidth;  ///< widest text in the last column
 };
 
 RW_VLIST *
@@ -591,6 +650,47 @@ RwVListColumnSpan (
   IN  CONST lv_area_t  *Row,
   IN  UINTN            Index,
   OUT lv_area_t        *Cell
+  );
+
+/** Pixel width of a one-line text. **/
+INT32
+RwTextWidth (
+  IN CONST lv_font_t  *Font,
+  IN CONST CHAR8      *Text
+  );
+
+/**
+  Make the scrollable width at least Width pixels (long text in the last
+  column), so it can be scrolled into view.
+**/
+VOID
+RwVListFitWidth (
+  IN RW_VLIST  *List,
+  IN INT32     Width
+  );
+
+/**
+  Text TextWidth pixels wide goes in column Index: a fixed column widens to
+  show it, and the last column's text widens the scroll area.
+**/
+VOID
+RwVListFitCell (
+  IN RW_VLIST  *List,
+  IN UINTN     Index,
+  IN INT32     TextWidth
+  );
+
+/** Back to the column widths as set and no extra scroll width (new content). **/
+VOID
+RwVListResetWidth (
+  IN RW_VLIST  *List
+  );
+
+/** Left edge of column Index relative to the row (0 for the first). **/
+INT32
+RwVListColumnX (
+  IN RW_VLIST  *List,
+  IN UINTN     Index
   );
 
 /**
@@ -848,6 +948,27 @@ RwTextViewSetText (
 UINTN
 RwTextViewLineCount (
   IN RW_TEXTVIEW  *View
+  );
+
+CONST CHAR8 *
+RwTextViewGetText (
+  IN RW_TEXTVIEW  *View
+  );
+
+CONST RW_INFO *
+RwTreeViewGetInfo (
+  IN RW_TREEVIEW  *Tree
+  );
+
+/**
+  Append the content of a tree view, property table, table or text view as
+  plain text (File > Save Window). FALSE for other widgets.
+**/
+BOOLEAN
+RwWidgetToText (
+  IN     RW_WIDGET  *Widget,
+  IN OUT RW_STR     *Out,
+  IN     BOOLEAN    Crlf
   );
 
 #endif

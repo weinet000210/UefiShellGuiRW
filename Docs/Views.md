@@ -50,7 +50,30 @@ CPU, turning the SMBus host on) ask first with No as the default.
 | Monitor EDID | `Views/EdidView.c` | Displays / EDID decode (vendor, timings, descriptors, extensions, checksums) and raw bytes. |
 | CPU MSR (extended) | `Views/MsrView.c` | `Ctrl+Left` / `Ctrl+Right` switch the processor; reads and writes run on that CPU. |
 
+## Phase 6
+
+Tools. Files go next to `UefiShellGuiRW.efi` (or the root of the first
+writable volume when that one is read-only), named `PREFIXnnnn.EXT`. Nothing
+is written to disk unless the user asks.
+
+| Command | File | What it does |
+|---|---|---|
+| Save Screenshot (`F12`) | `Tools/Tools.c` | The whole screen read back from GOP as a 24-bit BMP, `SCRnnnn.BMP`. |
+| Save Window to File (`Ctrl+S`) | `Tools/Tools.c` | Hex windows: asks start (default the page) and length (up to 1 MB), saves `HEXnnnn.TXT` (hex dump) and `HEXnnnn.BIN`. Other windows: the text of their visible lists, `SAVEnnnn.TXT`. Windows with their own save (Write Log, editors) use it. |
+| Dump All to File | `Tools/Tools.c`, `RwDump.c` | PCI, ACPI (with ASL), SMBIOS, USB, Super I/O, SPD (never enables a disabled SMBus host), ATA / NVMe identify, EDID, known MSRs on every CPU, `DUMPnnnn.TXT`. |
+| Snapshots (hex grids) | `Widgets/HexGrid.c` | `Ctrl+N` takes a snapshot of the page and saves `SNAPnnnn.BIN`; bytes that differ stay red on every read until `Ctrl+N` clears it. `Ctrl+L` loads `SNAPnnnn.BIN` by number (for example to compare across a reboot). |
+| Write Log | `Tools/WriteLogView.c` | Every write of the session: time, space, address, width, old value (`--` where reading has side effects), new value, status. Updates itself; `Del` clears; `Ctrl+S` saves `WLOGnnnn.TXT`. |
+| File Browser | `Tools/FileView.c` | Volumes / folder (name, size, date). `Enter` opens a folder or a file, `Backspace` goes up. |
+| Text / Hex Editor | `Tools/FileEdit.c` | Text files up to 64 KB (ASCII / UTF-8, UCS-2 with BOM; CRLF kept) in a text editor, anything else up to 16 MB in a hex grid. Edits stay in memory; `Ctrl+S` asks, then replaces the file; closing a changed file asks. No delete or rename. |
+
 ## Tests
+
+`SelfTestTools.c`: snapshot on a buffer the test allocated (a change stays
+red, cleared, loaded back by number), the write log entry of a grid write,
+hex range save (TXT + BIN), the Write Log window following new writes and
+its save, `F12` BMP header against the screen size, Dump All sections (ASL,
+the NVMe serial, both CPUs), generic Save Window, and the File Browser with
+the text editor (typing, close asks, save with CRLF) and the hex editor.
 
 `SelfTestDevices.c` runs on a q35 machine with two CPUs, the AHCI disk and a
 64 MiB NVMe drive (serial RWNVME01): EC and Super I/O notes, COM1 settings
@@ -75,3 +98,5 @@ adding MSRs and writing IA32_PAT back with its own value.
 ![Phase 4 windows in QEMU at 1024x768](Images/phase4-decoders.png)
 
 ![Phase 5 windows in QEMU at 1024x768](Images/phase5-devices.png)
+
+![Phase 6 tools in QEMU at 1024x768](Images/phase6-tools.png)
