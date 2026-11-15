@@ -2,7 +2,9 @@
   ATA / NVMe Identify window: every drive the firmware drives (ATA and
   ATAPI through ATA pass-thru, NVMe controllers and their active namespaces
   through NVMe pass-thru) on the left, the decoded identify data with the
-  raw bytes on the right. Only identify commands are sent.
+  raw bytes on the right. Ctrl+T switches the right side to the drive's
+  health: SMART attributes (ATA) or the Health, Firmware Slot and Error log
+  pages (NVMe). Only identify and read-only log commands are sent.
 
   Copyright (c) 2026, Niall Tseng. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -34,24 +36,67 @@ CapacityText (
 STATIC
 VOID
 Show (
-  IN INT32  Index
+  IN INT32    Index,
+  IN BOOLEAN  Force
   )
 {
   RW_INFO         Info;
   RW_STORAGE_DEV  *D;
-  CHAR8           Text[160];
+  CHAR8           Text[200];
 
-  if ((Index < 0) || ((UINTN)Index >= mStor.List->Count) || (Index == mStor.Current)) {
+  if ((Index < 0) || ((UINTN)Index >= mStor.List->Count) || ((Index == mStor.Current) && !Force)) {
     return;
   }
 
   mStor.Current = Index;
   D             = &mStor.List->Devs[Index];
-  AsciiSPrint (Text, sizeof (Text), "%a   %a", RwStorageKindName (D->Kind), D->Model);
+  AsciiSPrint (
+    Text,
+    sizeof (Text),
+    "%a   %a   %a (Ctrl+T: %a)",
+    RwStorageKindName (D->Kind),
+    D->Model,
+    mStor.ShowHealth ? "Health" : "Identify",
+    mStor.ShowHealth ? "identify" : "health"
+    );
   lv_label_set_text (mStor.Heading, Text);
   RwInfoInit (&Info);
-  RwStorageDecode (D, &Info);
+  if (mStor.ShowHealth) {
+    RwStorageHealthDecode (D, &Info);
+  } else {
+    RwStorageDecode (D, &Info);
+  }
+
   RwPropTableSetInfo (mStor.Decode, &Info);
+}
+
+STATIC
+BOOLEAN
+WindowKey (
+  IN RW_VLIST                  *List,
+  IN CONST UEFI_GUI_KEY_EVENT  *Key
+  )
+{
+  if (RwKeyIsCtrl (Key, 't')) {
+    RwStorageViewSetHealth ((BOOLEAN)!mStor.ShowHealth);
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+VOID
+RwStorageViewSetHealth (
+  IN BOOLEAN  Health
+  )
+{
+  if (mStor.Window == NULL) {
+    return;
+  }
+
+  mStor.ShowHealth = Health;
+  Show (mStor.Current, TRUE);
+  RwStatusSetText (Health ? "Drive health: SMART attributes / NVMe log pages." : "Drive identify data.");
 }
 
 STATIC
@@ -63,7 +108,7 @@ OnSelect (
   IN VOID      *Context
   )
 {
-  Show (Tag);
+  Show (Tag, FALSE);
 }
 
 STATIC
@@ -169,13 +214,15 @@ RwViewOpenStorage (
   lv_obj_set_style_pad_column (Window->Content, 4, 0);
 
   Left = RwViewColumn (Window->Content, LIST_WIDTH);
-  RwViewLabel (Left, "Drives (F5: identify again)");
+  RwViewLabel (Left, "Drives (F5: read again, Ctrl+T: identify / health)");
   mStor.Drives = RwTableCreate (RwViewPane (Left, 1), Window, Columns, ARRAY_SIZE (Columns), TRUE);
   RwTableSetCallbacks (mStor.Drives, OnSelect, OnActivate, NULL);
+  RwTableList (mStor.Drives)->ExtraKey = WindowKey;
 
   Right         = RwViewColumn (Window->Content, 0);
   mStor.Heading = RwViewLabel (Right, "");
   mStor.Decode  = RwPropTableCreate (RwViewPane (Right, 1), Window, TRUE);
+  RwPropTableList (mStor.Decode)->ExtraKey = WindowKey;
 
   RwStorageScan (mStor.List);
   Fill ();

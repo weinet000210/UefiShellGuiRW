@@ -161,6 +161,13 @@ TestDump (
   CHECK (!Text.Oom && AsciiStrStr (Text.Buf, "DefinitionBlock") != NULL && AsciiStrStr (Text.Buf, "---- FACP") != NULL, "dump: ACPI with the DSDT as ASL");
   CHECK (AsciiStrStr (Text.Buf, "CPU 0") != NULL && AsciiStrStr (Text.Buf, "CPU 1") != NULL, "dump: MSRs of every CPU");
   RwStrFree (&Text);
+  RwStrInit (&Text);
+  RwDumpAll (RW_DUMP_CPUID | RW_DUMP_UEFI | RW_DUMP_STORAGE, FALSE, &Text);
+  TestLog ("    dump of CPUID, UEFI, storage: %d bytes", Text.Len);
+  CHECK (!Text.Oom && AsciiStrStr (Text.Buf, "==== CPUID ====") != NULL && AsciiStrStr (Text.Buf, "00000001.0 ") != NULL, "dump: CPUID leaves");
+  CHECK (AsciiStrStr (Text.Buf, "Configuration tables") != NULL && AsciiStrStr (Text.Buf, "EfiPciIoProtocol") != NULL, "dump: system table and handle database");
+  CHECK (AsciiStrStr (Text.Buf, "SMART attributes") != NULL && AsciiStrStr (Text.Buf, "SMART / Health log") != NULL, "dump: SMART and NVMe health");
+  RwStrFree (&Text);
 }
 
 VOID

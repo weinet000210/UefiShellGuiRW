@@ -108,10 +108,12 @@ RwWlogToText (
 #define RW_DUMP_USB      BIT3
 #define RW_DUMP_SIO      BIT4
 #define RW_DUMP_SPD      BIT5     // SPD EEPROMs 50h-57h; never enables a disabled SMBus host
-#define RW_DUMP_STORAGE  BIT6
+#define RW_DUMP_STORAGE  BIT6     // identify data and SMART / NVMe health logs
 #define RW_DUMP_EDID     BIT7
 #define RW_DUMP_MSR      BIT8     // known MSRs on every CPU (an AP only reads what the BSP read)
-#define RW_DUMP_ALL      0x1FF
+#define RW_DUMP_CPUID    BIT9     // every leaf of every CPU, raw and decoded
+#define RW_DUMP_UEFI     BIT10    // system table, configuration tables, GOP, TPM, handle database
+#define RW_DUMP_ALL      0x7FF
 
 /**
   Append the selected parts as text, each under a "==== Name ====" heading.

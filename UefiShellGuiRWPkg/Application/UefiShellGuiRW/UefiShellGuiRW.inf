@@ -12,7 +12,7 @@
   BASE_NAME                      = UefiShellGuiRW
   FILE_GUID                      = 6B1E7C3A-52D4-4F0E-9C61-3A8D2F5B7E10
   MODULE_TYPE                    = UEFI_APPLICATION
-  VERSION_STRING                 = 0.0.6
+  VERSION_STRING                 = 0.0.7
   ENTRY_POINT                    = UefiShellGuiRWMain
 
 [Sources]
@@ -62,12 +62,17 @@
   SelfTestDecoders.c
   SelfTestDevices.c
   SelfTestTools.c
+  SelfTestInfo.c
   Tools/Tools.h
   Tools/File.c
   Tools/Tools.c
   Tools/WriteLogView.c
   Tools/FileView.c
   Tools/FileEdit.c
+  Tools/CalcView.c
+  Views/CpuidView.c
+  Views/HandleView.c
+  Views/SystemView.c
 
 [Packages]
   MdePkg/MdePkg.dec

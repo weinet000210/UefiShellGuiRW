@@ -39,6 +39,10 @@ STATIC CONST RW_COMMAND  mCommands[] = {
   { RwCmdCloseAll,   "Close All",                 NULL,       NULL,             NULL      },
   { RwCmdAbout,      "About UefiShellGuiRW",      "F1",       &gIconAbout,      NULL      },
   { RwCmdFileEdit,   "File Editor",               NULL,       &gIconFiles,      NULL      },
+  { RwCmdCpuid,      "CPUID",                     NULL,       &gIconCpuid,      NULL      },
+  { RwCmdHandles,    "UEFI Handles",              NULL,       &gIconHandles,    NULL      },
+  { RwCmdSystem,     "UEFI System",               NULL,       &gIconSystem,     NULL      },
+  { RwCmdCalc,       "Calculator",                NULL,       &gIconCalc,       NULL      },
 };
 
 CONST RW_COMMAND *
@@ -215,6 +219,18 @@ RwRunCommand (
             break;
           case RwCmdFiles:
             RwViewOpenFiles ();
+            break;
+          case RwCmdCpuid:
+            RwViewOpenCpuid ();
+            break;
+          case RwCmdHandles:
+            RwViewOpenHandles ();
+            break;
+          case RwCmdSystem:
+            RwViewOpenSystem ();
+            break;
+          case RwCmdCalc:
+            RwViewOpenCalc ();
             break;
           default:
             RwViewOpenPlaceholder (Id);

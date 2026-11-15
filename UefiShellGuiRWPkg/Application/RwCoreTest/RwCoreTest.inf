@@ -31,6 +31,9 @@
   TestStorage.c
   TestEdid.c
   TestTools.c
+  TestCpuid.c
+  TestUefi.c
+  TestCalc.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -49,6 +52,7 @@
 
 [Protocols]
   gEfiSerialIoProtocolGuid                      ## CONSUMES
+  gEfiPciIoProtocolGuid                         ## CONSUMES
 
 [Guids]
   gEfiAcpi20TableGuid                           ## SOMETIMES_CONSUMES

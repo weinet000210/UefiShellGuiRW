@@ -1,9 +1,9 @@
 /** @file
-  Menu bar with drop-down menus (File, Access, Specific, Window, Help).
+  Menu bar with drop-down menus (File, Access, Specific, Tools, Window, Help).
 
   Mouse: click a title to open its menu, move over the other titles to
   switch, click an entry to run it, click anywhere else to close.
-  Keyboard: F10 opens File, Alt+F/A/S/W/H open a menu, Left/Right switch
+  Keyboard: F10 opens File, Alt+F/A/S/T/W/H open a menu, Left/Right switch
   menus, Up/Down select, Enter runs, Esc closes.
 
   Copyright (c) 2026, Niall Tseng. All rights reserved.<BR>
@@ -27,15 +27,18 @@ typedef struct {
 } RW_MENU;
 
 STATIC CONST RW_COMMAND_ID  mFileEntries[]     = {
-  RwCmdRefresh,  RwCmdSaveWindow, RwCmdScreenshot, RwCmdDumpAll, RwCmdNone,
-  RwCmdWriteLog, RwCmdFiles,      RwCmdNone,       RwCmdExit
+  RwCmdRefresh,  RwCmdSaveWindow, RwCmdScreenshot, RwCmdDumpAll, RwCmdNone, RwCmdExit
 };
 STATIC CONST RW_COMMAND_ID  mAccessEntries[]   = {
   RwCmdPci,  RwCmdMemory, RwCmdIo,      RwCmdIndexData, RwCmdNone,
   RwCmdCmos, RwCmdMsr,    RwCmdNone,
   RwCmdEc,   RwCmdSuperIo, RwCmdSmbus,  RwCmdStorage,   RwCmdUsb
 };
-STATIC CONST RW_COMMAND_ID  mSpecificEntries[] = { RwCmdAcpi, RwCmdSmbios, RwCmdPcieTree, RwCmdNone, RwCmdEdid, RwCmdComPort };
+STATIC CONST RW_COMMAND_ID  mSpecificEntries[] = {
+  RwCmdAcpi,  RwCmdSmbios,  RwCmdPcieTree, RwCmdNone, RwCmdEdid, RwCmdComPort, RwCmdNone,
+  RwCmdCpuid, RwCmdHandles, RwCmdSystem
+};
+STATIC CONST RW_COMMAND_ID  mToolsEntries[]    = { RwCmdCalc, RwCmdNone, RwCmdWriteLog, RwCmdFiles };
 STATIC CONST RW_COMMAND_ID  mWindowEntries[]   = { RwCmdCascade, RwCmdTileH, RwCmdTileV, RwCmdNone, RwCmdCloseAll };
 STATIC CONST RW_COMMAND_ID  mHelpEntries[]     = { RwCmdAbout };
 
@@ -43,6 +46,7 @@ STATIC CONST RW_MENU  mMenus[] = {
   { "File",     L'f', mFileEntries,     ARRAY_SIZE (mFileEntries),     FALSE },
   { "Access",   L'a', mAccessEntries,   ARRAY_SIZE (mAccessEntries),   FALSE },
   { "Specific", L's', mSpecificEntries, ARRAY_SIZE (mSpecificEntries), FALSE },
+  { "Tools",    L't', mToolsEntries,    ARRAY_SIZE (mToolsEntries),    FALSE },
   { "Window",   L'w', mWindowEntries,   ARRAY_SIZE (mWindowEntries),   TRUE  },
   { "Help",     L'h', mHelpEntries,     ARRAY_SIZE (mHelpEntries),     FALSE },
 };

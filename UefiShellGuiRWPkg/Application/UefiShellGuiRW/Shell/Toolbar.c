@@ -14,7 +14,7 @@ STATIC CONST RW_COMMAND_ID  mToolbar[] = {
   RwCmdRefresh, RwCmdScreenshot, RwCmdDumpAll, RwCmdWriteLog, RwCmdFiles, RwCmdNone,
   RwCmdPci,     RwCmdMemory,     RwCmdIo,     RwCmdIndexData, RwCmdCmos, RwCmdMsr, RwCmdNone,
   RwCmdEc,      RwCmdSuperIo,    RwCmdSmbus,  RwCmdStorage,   RwCmdUsb,  RwCmdNone,
-  RwCmdAcpi,    RwCmdSmbios,     RwCmdPcieTree, RwCmdEdid,    RwCmdComPort, RwCmdNone,
+  RwCmdAcpi,    RwCmdSmbios,     RwCmdPcieTree, RwCmdEdid,    RwCmdComPort, RwCmdCpuid, RwCmdHandles, RwCmdNone,
   RwCmdCascade, RwCmdTileH,      RwCmdTileV,  RwCmdNone,
   RwCmdAbout
 };

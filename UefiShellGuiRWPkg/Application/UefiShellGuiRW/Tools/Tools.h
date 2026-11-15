@@ -196,6 +196,36 @@ RwWlogViewGet (
   );
 
 //
+// ---- CalcView.c (Phase 7) ------------------------------------------------------
+//
+typedef struct {
+  RW_MDI_WINDOW    *Window;
+  lv_obj_t         *Area;        ///< one-line expression input
+  RW_WIDGET        *Input;
+  lv_obj_t         *Message;     ///< syntax error or "= value"
+  RW_PROPTABLE     *Result;
+  RW_BITFIELD      *Bits;
+  UINT64           Value;
+  BOOLEAN          Valid;
+} RW_CALC_VIEW;
+
+RW_MDI_WINDOW *
+RwViewOpenCalc (
+  VOID
+  );
+
+RW_CALC_VIEW *
+RwCalcViewGet (
+  VOID
+  );
+
+/** Put Expression in the input and evaluate it. **/
+VOID
+RwCalcViewSetText (
+  IN CONST CHAR8  *Expression
+  );
+
+//
 // ---- FileView.c / FileEdit.c ---------------------------------------------------
 //
 #define RW_FILE_PATH_MAX   260

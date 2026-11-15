@@ -49,8 +49,11 @@ application share it.
 | `RwUsb.h` | `RwUsb.c` | USB controllers, device tree, descriptors |
 | `RwUart.h` | `RwUart.c` | 16550 detection, setup, send / receive, loopback test |
 | `RwSmbus.h` | `RwSmbus.c`, `RwSpd.c` | Intel ICH/PCH and AMD SB/FCH SMBus host (PIIX4 layout), enable, scan, byte read/write; SPD read with DDR4 (36h/37h) and DDR5 (MR11) paging, DDR3/4/5 decode, JEDEC IDs, CRC |
-| `RwStorage.h` | `RwStorage.c` | ATA / ATAPI IDENTIFY (ATA pass-thru), NVMe Identify Controller / Namespace (NVMe pass-thru), decoders |
+| `RwStorage.h` | `RwStorage.c` | ATA / ATAPI IDENTIFY (ATA pass-thru), NVMe Identify Controller / Namespace (NVMe pass-thru), health data (ATA SMART READ DATA / THRESHOLDS only when SMART is already enabled; NVMe log pages 02h, 03h, 01h), decoders |
 | `RwEdid.h` | `RwEdid.c` | EDID from EDID Active / Discovered, else the QEMU stdvga EDID window; EDID 1.x decode |
+| `RwCpuid.h` | `RwCpuid.c` | CPUID leaves and subleaves of any CPU (APs through MP services), leaf decode, processor summary (features, caches, topology) |
+| `RwUefi.h` | `RwUefi.c`, `RwGuidNames.c` | handle database (protocols, open information, descriptions), system and configuration tables, GOP modes, TPM 2.0 PCRs and TCG2 event log; GUID names generated from edk2 DEC files by `scripts/gen-guids.py` |
+| `RwCalc.h` | `RwCalc.c` | 64-bit calculator expressions and the value in every base |
 | `RwTools.h` | `RwWriteLog.c`, `RwDump.c`, `RwToolsFormat.c` | write log (RwDsWrite, RwMsrWriteOn and RwSmbusEnable record time, space, address, width, old / new value and status; newest 1000 in memory), Dump All text, BMP / hex dump / page snapshot formats. No file access: the application saves the buffers. |
 
 ## Tests

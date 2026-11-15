@@ -36,6 +36,10 @@
   RwWriteLog.c
   RwToolsFormat.c
   RwDump.c
+  RwCpuid.c
+  RwUefi.c
+  RwGuidNames.c
+  RwCalc.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -68,6 +72,10 @@
   gEfiGraphicsOutputProtocolGuid                ## SOMETIMES_CONSUMES
   gEfiEdidActiveProtocolGuid                    ## SOMETIMES_CONSUMES
   gEfiEdidDiscoveredProtocolGuid                ## SOMETIMES_CONSUMES
+  gEfiLoadedImageProtocolGuid                   ## SOMETIMES_CONSUMES
+  gEfiLoadedImageDevicePathProtocolGuid         ## SOMETIMES_CONSUMES
+  gEfiComponentName2ProtocolGuid                ## SOMETIMES_CONSUMES
+  gEfiTcg2ProtocolGuid                          ## SOMETIMES_CONSUMES
 
 [Guids]
   gEfiSmbiosTableGuid                           ## SOMETIMES_CONSUMES
